@@ -22,8 +22,9 @@ a bundling tool that understands monorepos.</p>
 </a>
 <p>The <a href="https://typedoc.org">TypeDoc</a> documentation can be built using
 <code>make doc</code> and end up in the subdirectory <code>doc</code>, but it is also
-<a href="">available here</a>. We have modified the output to link directly to
-the relevant lines in the actual source code at GitHub.</p>
+<a href="https://verificatum.github.io/doc/index.html">available here</a>. We
+have modified the output to link directly to the relevant lines in the
+actual source code at GitHub.</p>
 
 <a href="#example" id="example" style="color: inherit; text-decoration: none;">
   <h3>Example</h3>
@@ -121,7 +122,7 @@ VJSC.</p>
 <p>Optionally the <code>muladd_loop()</code> function which is the work horse of the
 whole library can be compiled from C to WebAssembly, in which case the
 assembly code is injected into the source of
-<code>packages/src/arithm/li/func.ts</code>. Edit <code>Makefile</code> to achieve
+<code>packages/arithm/src/li/func.ts</code>. Edit <code>Makefile</code> to achieve
 this. Search for <code>WASM_M4</code> and comment/uncomment two lines as
 explained. The source contains macros starting with <code>M4_WASM</code> that
 enables or disables, and injects different code.</p>
