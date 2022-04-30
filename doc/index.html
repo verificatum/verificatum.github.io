@@ -1,0 +1,286 @@
+<!DOCTYPE html><html class="default"><head><meta charSet="utf-8"/><meta http-equiv="x-ua-compatible" content="IE=edge"/><title>@verificatum/bundle</title><meta name="description" content="Documentation for @verificatum/bundle"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="assets/style.css"/><link rel="stylesheet" href="assets/highlight.css"/><script async src="assets/search.js" id="search-script"></script></head><body><script>document.body.classList.add(localStorage.getItem("tsd-theme") || "os")</script><header><div class="tsd-page-toolbar"><div class="container"><div class="table-wrap"><div class="table-cell" id="tsd-search" data-base="."><div class="field"><label for="tsd-search-field" class="tsd-widget search no-caption">Search</label><input type="text" id="tsd-search-field"/></div><ul class="results"><li class="state loading">Preparing search index...</li><li class="state failure">The search index is not available</li></ul><a href="index.html" class="title">@verificatum/bundle</a></div><div class="table-cell" id="tsd-widgets"><div id="tsd-filter"><a href="#" class="tsd-widget options no-caption" data-toggle="options">Options</a><div class="tsd-filter-group"><div class="tsd-select" id="tsd-filter-visibility"><span class="tsd-select-label">All</span><ul class="tsd-select-list"><li data-value="public">Public</li><li data-value="protected">Public/Protected</li><li data-value="private" class="selected">All</li></ul></div> <input type="checkbox" id="tsd-filter-inherited" checked/><label class="tsd-widget" for="tsd-filter-inherited">Inherited</label><input type="checkbox" id="tsd-filter-externals" checked/><label class="tsd-widget" for="tsd-filter-externals">Externals</label></div></div><a href="#" class="tsd-widget menu no-caption" data-toggle="menu">Menu</a></div></div></div></div><div class="tsd-page-title"><div class="container"><h1> @verificatum/bundle </h1></div></div></header><div class="container container-main"><div class="row"><div class="col-8 col-content"><div class="tsd-panel tsd-typography"><p>Self-contained cryptographic library for use in electronic voting
+clients. Complete documentation with explicit references to the
+literature on basic arithmetic algorithms makes it good teaching
+material.</p>
+
+<a href="#installation" id="installation" style="color: inherit; text-decoration: none;">
+  <h2>Installation</h2>
+</a>
+<p>Installation instructions are given for Ubuntu. Adapt as needed.</p>
+<pre><code><span class="hl-0"># </span><span class="hl-1">Building</span><span class="hl-0"> </span><span class="hl-1">tools</span><span class="hl-0">.</span><br/><span class="hl-1">sudo</span><span class="hl-0"> </span><span class="hl-1">apt</span><span class="hl-0"> </span><span class="hl-1">install</span><span class="hl-0"> </span><span class="hl-1">make</span><span class="hl-0"> </span><span class="hl-1">m4</span><br/><br/><span class="hl-0"># </span><span class="hl-1">Most</span><span class="hl-0"> </span><span class="hl-1">recent</span><span class="hl-0"> </span><span class="hl-1">version</span><span class="hl-0"> </span><span class="hl-2">of</span><span class="hl-0"> </span><span class="hl-1">node</span><span class="hl-0">.</span><br/><span class="hl-1">curl</span><span class="hl-0"> -</span><span class="hl-1">fsSL</span><span class="hl-0"> </span><span class="hl-3">https</span><span class="hl-0">:</span><span class="hl-4">//deb.nodesource.com/setup_current.x | sudo -E bash -</span><br/><span class="hl-1">sudo</span><span class="hl-0"> </span><span class="hl-1">apt</span><span class="hl-0"> </span><span class="hl-1">install</span><span class="hl-0"> -</span><span class="hl-1">y</span><span class="hl-0"> </span><span class="hl-1">nodejs</span><br/><br/><span class="hl-0"># </span><span class="hl-1">TypeScript</span><span class="hl-0"> </span><span class="hl-1">globally</span><span class="hl-0">.</span><br/><span class="hl-1">sudo</span><span class="hl-0"> </span><span class="hl-1">npm</span><span class="hl-0"> </span><span class="hl-1">install</span><span class="hl-0"> -</span><span class="hl-1">g</span><span class="hl-0"> </span><span class="hl-1">typescript</span><br/><br/><span class="hl-0"># </span><span class="hl-1">Install</span><span class="hl-0"> </span><span class="hl-5">NPM</span><span class="hl-0"> </span><span class="hl-1">development</span><span class="hl-0"> </span><span class="hl-1">dependencies</span><span class="hl-0">.</span><br/><span class="hl-1">npm</span><span class="hl-0"> </span><span class="hl-1">i</span><br/><br/><span class="hl-0"># </span><span class="hl-1">To</span><span class="hl-0"> </span><span class="hl-1">enable</span><span class="hl-0"> </span><span class="hl-5">WASM</span><span class="hl-0"> </span><span class="hl-1">code</span><span class="hl-0"> </span><span class="hl-1">the</span><span class="hl-0"> </span><span class="hl-1">following</span><span class="hl-0"> </span><span class="hl-1">is</span><span class="hl-0"> </span><span class="hl-1">needed</span><span class="hl-0">.</span><br/><span class="hl-1">sudo</span><span class="hl-0"> </span><span class="hl-1">apt</span><span class="hl-0"> </span><span class="hl-1">install</span><span class="hl-0"> </span><span class="hl-1">clang</span><br/><span class="hl-1">sudo</span><span class="hl-0"> </span><span class="hl-1">update</span><span class="hl-0">-</span><span class="hl-1">alternatives</span><span class="hl-0"> --</span><span class="hl-1">install</span><span class="hl-0"> /</span><span class="hl-1">usr</span><span class="hl-0">/</span><span class="hl-1">bin</span><span class="hl-0">/</span><span class="hl-1">wasm</span><span class="hl-0">-</span><span class="hl-1">ld</span><span class="hl-0"> </span><span class="hl-1">wasm</span><span class="hl-0">-</span><span class="hl-1">ld</span><span class="hl-0"> /</span><span class="hl-1">usr</span><span class="hl-0">/</span><span class="hl-1">bin</span><span class="hl-0">/</span><span class="hl-1">wasm</span><span class="hl-0">-</span><span class="hl-1">ld</span><span class="hl-0">-</span><span class="hl-6">12</span><span class="hl-0"> </span><span class="hl-6">100</span><br/><br/><span class="hl-0"># </span><span class="hl-1">To</span><span class="hl-0"> </span><span class="hl-1">run</span><span class="hl-0"> </span><span class="hl-1">the</span><span class="hl-0"> </span><span class="hl-1">webserver</span><span class="hl-0"> </span><span class="hl-1">that</span><span class="hl-0"> </span><span class="hl-1">serves</span><span class="hl-0"> </span><span class="hl-1">the</span><span class="hl-0"> </span><span class="hl-1">test</span><span class="hl-0"> </span><span class="hl-1">and</span><span class="hl-0"> </span><span class="hl-1">benchmark</span><span class="hl-0"> </span><span class="hl-1">suites</span><span class="hl-0"> </span><span class="hl-1">you</span><br/><span class="hl-0"># </span><span class="hl-1">may</span><span class="hl-0"> </span><span class="hl-1">need</span><span class="hl-0"> </span><span class="hl-1">to</span><span class="hl-0"> </span><span class="hl-1">install</span><span class="hl-0"> </span><span class="hl-1">Python</span><span class="hl-0"> </span><span class="hl-6">3.</span><br/><span class="hl-1">sudo</span><span class="hl-0"> </span><span class="hl-1">apt</span><span class="hl-0"> </span><span class="hl-1">install</span><span class="hl-0"> </span><span class="hl-1">python3</span><br/>
+</code></pre>
+
+<a href="#usage" id="usage" style="color: inherit; text-decoration: none;">
+  <h2>Usage</h2>
+</a>
+<p>The simplest way to use the library is to use one of the single-file
+JavaScript files compiled using <code>make jsfiles</code> which end up in
+<code>pure/dist</code>, but users may also choose to use a bundling tool that
+understands monorepos.</p>
+<p><em>Only here for the fast integer arithmetic? Build using <code>make vts-ba</code>
+and include <code>pure/dist/vts-ba-VERSION.js</code> in your project.</em></p>
+
+<a href="#examples" id="examples" style="color: inherit; text-decoration: none;">
+  <h3>Examples</h3>
+</a>
+<p>After installing the build tools above you can build the library and
+start a webserver at localhost where you can try it directly. Simply
+use <code>make webserver</code> to compile the code and start the webserver. The
+examples, benchmark suite, and test suite are then available on your
+computer at <a href="http://localhost:8000">http://localhost:8000</a>.</p>
+<ul>
+<li><a href="http://localhost:8000/example_explicit.html">Example: Explicit Low-level Computations</a></li>
+<li><a href="http://localhost:8000/example_client_opts.html.html">Example: Using the Client Class</a></li>
+<li><a href="http://localhost:8000/bench.html">Benchmark Suite</a></li>
+<li><a href="http://localhost:8000/test.html">Test Suite</a></li>
+</ul>
+<p>The source code of the examples is heavily documented to allow simple
+cut and paste and usage in your own client.</p>
+
+<a href="#documentation" id="documentation" style="color: inherit; text-decoration: none;">
+  <h3>Documentation</h3>
+</a>
+<p>The <a href="https://typedoc.org">TypeDoc</a> documentation can be built using
+<code>make doc</code> and end up in the subdirectory <code>doc</code>, but it is also
+<a href="https://verificatum.github.io/tsdoc/index.html">available here</a>. We
+have modified the output to link directly to the relevant lines in the
+actual source code at GitHub.</p>
+<p>We have made an effort to not only cite sources for any non-trivial
+algorithms, but also adhere to the notation in the pseudo code to
+the extent possible. Our main source is
+<a href="https://cacr.uwaterloo.ca/hac/">HandBook of Applied Cryptography</a>,
+Alfred J. Menezes, Paul C. van Oorschot and Scott A. Vanstone, which
+is freely available online.</p>
+
+<a href="#integration-with-the-verificatum-mix-net" id="integration-with-the-verificatum-mix-net" style="color: inherit; text-decoration: none;">
+  <h3>Integration with the Verificatum Mix-Net</h3>
+</a>
+<p>A few classes in the library are tailored for simple integration with
+the <a href="https://github.com/verificatum/verificatum-vmn">Verificatum Mix-Net
+(VMN)</a> in which the
+servers jointly generate a marshalled public key that contains the
+group description. If this is then combined with a description of a
+zero knowledge proof the client would proceed with one line of code.</p>
+<pre><code><span class="hl-0">&lt;</span><span class="hl-1">script</span><span class="hl-0"> </span><span class="hl-1">src</span><span class="hl-0">=</span><span class="hl-7">&quot;vts-baac-VERSION.js&quot;</span><span class="hl-0">&gt;&lt;/</span><span class="hl-8">script</span><span class="hl-0">&gt;</span><br/><br/><span class="hl-2">const</span><span class="hl-0"> [</span><span class="hl-5">ciphertext</span><span class="hl-0">, </span><span class="hl-5">digest</span><span class="hl-0">, </span><span class="hl-5">seed</span><span class="hl-0">] = (</span><span class="hl-2">new</span><span class="hl-0"> </span><span class="hl-9">WebAPIElGamalZKPoKClient</span><span class="hl-0">(</span><span class="hl-1">mpk</span><span class="hl-0">)).</span><span class="hl-9">encrypt</span><span class="hl-0">(</span><span class="hl-1">label</span><span class="hl-0">, </span><span class="hl-1">plaintext</span><span class="hl-0">)</span>
+</code></pre>
+
+<a href="#organisation" id="organisation" style="color: inherit; text-decoration: none;">
+  <h2>Organisation</h2>
+</a>
+
+<a href="#source-code" id="source-code" style="color: inherit; text-decoration: none;">
+  <h3>Source Code</h3>
+</a>
+<p>The source code resides in <code>src/ts</code> and contains M4 macros defined in
+<code>src/m4</code>. You may populate a TypeScript monorepo or single-file
+versions of the library (or subsets of the functionality).</p>
+
+<a href="#typescript-monorepo" id="typescript-monorepo" style="color: inherit; text-decoration: none;">
+  <h3>TypeScript Monorepo</h3>
+</a>
+<p>You may use <code>make tsmodules</code> to populate monorepo packages with pure
+TypeScript code. When populated with code the monorepo contains the
+following packages with zero external dependencies, but with internal
+dependencies given by their order.</p>
+<ul>
+<li><p><code>base</code> contains base classes and an abstract random source.</p>
+</li>
+<li><p><code>arithm</code> contains routines for arithmetic with big integers.</p>
+</li>
+<li><p><code>algebra</code> contains implementations of multiplicative groups,
+elliptic curve groups, and abstractions for product groups.</p>
+</li>
+<li><p><code>crypto</code> contains implementations of El Gamal and generalized
+Schnorr proofs.</p>
+</li>
+<li><p><code>dev</code> contains testing and benchmarking routines.</p>
+</li>
+</ul>
+<p>In addition to this the following packages allow application of the
+library within different environments:</p>
+<ul>
+<li><p><code>node</code> contains a wrapper of the builtin cryptographically strong
+pseudo random generator of Node.</p>
+</li>
+<li><p><code>devnode</code> contains a thin wrapper to run the test suite or benchmark
+suite from the command line. Use <code>make [check|bench]_modules</code> to invoke
+the tests or benchmarks, respectively.</p>
+</li>
+<li><p><code>dom</code> contains a wrapper of the builtin cryptographically strong
+pseudo random generator of browsers provided by the WebAPI.</p>
+</li>
+<li><p><code>devdom</code> contains a thin wrapper to run the test suite, benchmark
+suite, or example in a browser. Use <code>make [check|bench]_files</code> to
+invoke the tests or benchmarks, respectively.</p>
+</li>
+</ul>
+
+<a href="#javascript-from-monorepo" id="javascript-from-monorepo" style="color: inherit; text-decoration: none;">
+  <h5>JavaScript from Monorepo</h5>
+</a>
+<p>  You may use <code>make jsmodules</code> to compile the TypeScript modules into
+  JavaScript modules which end up in <code>packages/&lt;package&gt;/dist</code>. A
+  directory <code>@verificatum</code> is generated with symbolic links to these
+  directories to simulate a rudimentary form of packaging that allows
+  using the library directly from Node.</p>
+
+<a href="#typescript-as-single-file" id="typescript-as-single-file" style="color: inherit; text-decoration: none;">
+  <h3>TypeScript as Single File</h3>
+</a>
+<p>The precursor of this library was provided as a single JavaScript file.</p>
+<p>Similar TypeScript files, along with files which includes code from
+the additional packages, can be compiled using <code>make tsfiles</code>. This is
+done using custom scripts found in <code>tools/</code>. These files are found in
+<code>pure/src</code>.</p>
+<ul>
+<li><p><code>vts-ba-VERSION.ts</code> - Base routines and large integer arithmetic.</p>
+</li>
+<li><p><code>vts-baa-VERSION.ts</code> - Adds arithmetic for rings and groups.</p>
+</li>
+<li><p><code>vts-baac-VERSION.ts</code> - Adds group-based cryptography.</p>
+</li>
+<li><p><code>vts-baacd-VERSION.ts</code> - Adds testing and benchmarking routines.</p>
+</li>
+<li><p><code>vts-baac[d]-[n/d]-VERSION.ts</code> - Adds wrapper for the
+cryptographically strong random generator of Node (<code>n</code>) or WebAPI
+(<code>d</code>) to the <code>vts-baac[d]</code> configuration, with (<code>d</code>), or without,
+testing and benchmarking routines.</p>
+</li>
+</ul>
+
+<a href="#javascript-from-single-file" id="javascript-from-single-file" style="color: inherit; text-decoration: none;">
+  <h5>JavaScript from Single File</h5>
+</a>
+<p>The TypeScript single files may be compiled using, e.g, <code>make vts-ba</code>,
+into single JavaScript files that closely resemble the original
+library VJSC. The resulting files are found in <code>pure/dist</code>.</p>
+
+<a href="#minified-javascript-variants" id="minified-javascript-variants" style="color: inherit; text-decoration: none;">
+  <h5>Minified JavaScript Variants</h5>
+</a>
+<p>The JavaScript files may be minified by adding the postfix <code>-m-</code> to
+the configuration, e.g., <code>make vts-ba-m</code> compiles <code>vts-ba-m-VERSION.js</code>
+which is a minified version of <code>vts-ba-VERSION.js</code>.</p>
+<p>We use Uglify, <a href="https://github.com/mishoo/UglifyJS">https://github.com/mishoo/UglifyJS</a>. This is a
+relatively conservative minifier, but you should of course run the
+tests and benchmarks on the minified code using <code>make check_filesm</code>
+and <code>make bench_filesm</code> to make sure that the code that you are
+<em>actually</em> use behave as expected.</p>
+
+<a href="#optional-webassembly-compiled-from-c" id="optional-webassembly-compiled-from-c" style="color: inherit; text-decoration: none;">
+  <h3>Optional WebAssembly Compiled from C</h3>
+</a>
+<p>Optionally the <code>muladd_loop()</code> function, which is the work horse of
+the whole library, can be compiled from C to WebAssembly. In this case
+the assembly code is injected into the source of
+<code>packages/arithm/src/li/func.ts</code> to make the final library
+self-contained.</p>
+<p>Run, e.g., <code>make jsfiles WASM=true</code> or edit the <code>Makefile</code> to
+achieve this. The source contains macros starting with <code>M4_WASM</code> that
+enables or disables, and injects different code.  This gives a speedup
+of roughly a factor of two for large modular exponentiation, but it
+increases the memory requirements due to how the WebAssembler engine
+allocates memory.</p>
+<p>The WASM code itself is embedded in the TypeScript source file to make
+it self-contained and avoid asynchronous function calls when loading.</p>
+
+<a href="#selecting-the-included-groups" id="selecting-the-included-groups" style="color: inherit; text-decoration: none;">
+  <h3>Selecting the Included Groups</h3>
+</a>
+<p>You may wish to use only multiplicative groups or only elliptic curve
+groups, and you may want to only include a subset of the standardized
+named groups. The former is achieved, e.g., using <code>make GROUPTYPES=ModPGroup</code>. We refer the user to the <code>Makefile</code> for how to
+choose a subset of the standardized groups.</p>
+
+<a href="#a-word-about-wordsizes" id="a-word-about-wordsizes" style="color: inherit; text-decoration: none;">
+  <h2>A Word about Wordsizes</h2>
+</a>
+<p>JavaScript engines uses 64 bit floating point arithmetic, semantically
+speaking, but internally they may use 32 bit integers if it can be
+inferred that computations performed are equivalent.</p>
+<p>Thus, the implementation uses a <code>number</code> for each limb of a large
+integer as if it was a <code>int32_t</code>, but the actual wordsize can be
+configured, e.g., using <code>make jsfiles WORDSIZE=WS</code>, where <code>WS</code> is an
+even integer between 8 and 30 (inclusive).</p>
+<p>This allows <em>exhaustive</em> testing of the most basic routines from a
+logical point of view and is an effective way to trigger any word
+boundary bugs. It also makes the code a good teaching tool for
+intermediate level arithmetic code.</p>
+
+<a href="#contributing" id="contributing" style="color: inherit; text-decoration: none;">
+  <h2>Contributing</h2>
+</a>
+<p>The source code resides in the <code>src/ts</code> directory. Some TypeScript
+code is generated using M4 and possibly custom scripts. If you open an
+issue or make a pull request, then please make sure that you do it for
+the source and not the generated TypeScript code. The generated
+TypeDoc pages point to the actual source to help you do this.</p>
+
+<a href="#remarks" id="remarks" style="color: inherit; text-decoration: none;">
+  <h2>Remarks</h2>
+</a>
+<p>Generally, the web is a moving target and many tools are in
+development. This either requires workarounds, or workarounds are more
+stable and less error prone than using the most recent features
+announced. Incompatibilities between Node and browsers means that we
+have implemented some functionality that (strictly speaking) is already
+available, but this improves portability and robustness.</p>
+<p>TypeDoc is incomplete and does not handle dependencies
+correctly. Thus, we generate a temporary source tree that it can
+process correctly to generate the documentation.</p>
+<p>There no standard way of bundling JavaScript into a self-contained
+library, and the existing solutions are evolving. Thus, we leave it to
+the user to choose how to bundle the code using the module system they
+prefer, but we provide a standard monorepo structure as a starting
+point.</p>
+<p>Our single-file versions of natural subsets of the library are
+generated using custom scripts which rely on the consistency of our
+software. You may edit the <code>Makefile</code> to pick an even more precise
+subset, but please be careful.</p>
+<p><strong>We consider the single-file versions to be the most stable versions of
+the software, since they depend less on volatile decisions made by
+other developers and allow standalone testing.</strong></p>
+
+<a href="#future" id="future" style="color: inherit; text-decoration: none;">
+  <h2>Future</h2>
+</a>
+<p>If you have a better solution to any of the hacks used, then feel free
+to reach out to us, but please do not suggest yet another unstable
+package for something that can be done with a one-liner shell script.</p>
+<p>Our hope is that TypeScript will introduce stricter types similar to
+those available in AssemblyScript. The source is written with this in
+mind, so it is typed &quot;optimistically&quot; more stringently than necessary,
+e.g., using <code>int32_t</code>. These &quot;types&quot; should be considered to be no
+more than helpful comments at the moment, since no type checking
+actually occurs that differentiates integer types or even numbers from
+integers. Branding, interfaces, or union types do not actually give
+integer types.</p>
+
+<a href="#history" id="history" style="color: inherit; text-decoration: none;">
+  <h2>History</h2>
+</a>
+<p>VTS is a manual transpilation and improvement of the <a href="https://github.com/verificatum/verificatum-vjsc">Verificatum
+JavaScript Cryptography library
+(VJSC)</a>. The main
+refactoring done is isolating the integer arithmetic routines to allow
+independent use and moving implementations of groups and rings from
+<code>arithm</code> to <code>algebra</code>.</p>
+<p>Apart from this the transpilation is faithful, but the code is
+carefully organized to minimize dependencies and allow subsets to be
+used separately. No bugs have been discovered, but the software has
+been made more robust against incorrect usage. Modern language
+constructs introduced after VJSC was written are used
+consistently. The documentation has been improved and examples have
+been added to simplify adoption and deployment.</p>
+
+<a href="#license" id="license" style="color: inherit; text-decoration: none;">
+  <h2>License</h2>
+</a>
+<p>Copyright Douglas Wikström. All rights reserved. We have not decided
+yet how to share this work. Feel free to suggest a license that you
+think is suitable.</p>
+
+<a href="#acknowledgments" id="acknowledgments" style="color: inherit; text-decoration: none;">
+  <h2>Acknowledgments</h2>
+</a>
+</div></div><div class="col-4 col-menu menu-sticky-wrap menu-highlight"><nav class="tsd-navigation primary"><ul><li class="current"><a href="modules.html">Modules</a></li><li class=" tsd-kind-module"><a href="modules/_types.html">@types</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum.html">@verificatum</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra.html">@verificatum/algebra</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ByteTree.html">@verificatum/algebra/<wbr/>Byte<wbr/>Tree</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ByteTreeIndex.html">@verificatum/algebra/<wbr/>Byte<wbr/>Tree<wbr/>Index</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ECqPGroup.html">@verificatum/algebra/ECqPGroup</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ECqPGroupElement.html">@verificatum/algebra/ECqPGroup<wbr/>Element</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ECqPGroup_named.html">@verificatum/algebra/ECqPGroup_<wbr/>named</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ExpHom.html">@verificatum/algebra/<wbr/>Exp<wbr/>Hom</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_Hom.html">@verificatum/algebra/<wbr/>Hom</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ModPGroup.html">@verificatum/algebra/<wbr/>ModPGroup</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ModPGroupElement.html">@verificatum/algebra/<wbr/>ModPGroup<wbr/>Element</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ModPGroup_named.html">@verificatum/algebra/<wbr/>ModPGroup_<wbr/>named</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_PField.html">@verificatum/algebra/PField</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_PFieldElement.html">@verificatum/algebra/PField<wbr/>Element</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_PGroup.html">@verificatum/algebra/PGroup</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_PGroupElement.html">@verificatum/algebra/PGroup<wbr/>Element</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_PGroupFactory.html">@verificatum/algebra/PGroup<wbr/>Factory</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_PPGroup.html">@verificatum/algebra/PPGroup</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_PPGroupElement.html">@verificatum/algebra/PPGroup<wbr/>Element</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_PPRing.html">@verificatum/algebra/PPRing</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_PPRingElement.html">@verificatum/algebra/PPRing<wbr/>Element</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_PRing.html">@verificatum/algebra/PRing</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_PRingElement.html">@verificatum/algebra/PRing<wbr/>Element</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_PowProdHom.html">@verificatum/algebra/<wbr/>Pow<wbr/>Prod<wbr/>Hom</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ec.html">@verificatum/algebra/ec</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ec_EC.html">@verificatum/algebra/ec/EC</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ec_ECP.html">@verificatum/algebra/ec/ECP</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ec_func.html">@verificatum/algebra/ec/func</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_arithm.html">@verificatum/arithm</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_arithm_FixModPow.html">@verificatum/arithm/<wbr/>Fix<wbr/>Mod<wbr/>Pow</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_arithm_LI.html">@verificatum/arithm/LI</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_arithm_ModPowProd.html">@verificatum/arithm/<wbr/>Mod<wbr/>Pow<wbr/>Prod</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_arithm_li.html">@verificatum/arithm/li</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_arithm_li_SLI.html">@verificatum/arithm/li/SLI</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_arithm_li_func.html">@verificatum/arithm/li/func</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_arithm_uli.html">@verificatum/arithm/uli</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_arithm_uli_func.html">@verificatum/arithm/uli/func</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_base.html">@verificatum/base</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_base_RandomSource.html">@verificatum/base/<wbr/>Random<wbr/>Source</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_base_VerificatumObject.html">@verificatum/base/<wbr/>Verificatum<wbr/>Object</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_base_func.html">@verificatum/base/func</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_base_version.html">@verificatum/base/version</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto.html">@verificatum/crypto</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_ElGamal.html">@verificatum/crypto/<wbr/>El<wbr/>Gamal</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_ElGamalZKPoK.html">@verificatum/crypto/<wbr/>El<wbr/>GamalZKPoK</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_ElGamalZKPoKAdapter.html">@verificatum/crypto/<wbr/>El<wbr/>GamalZKPoKAdapter</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_ElGamalZKPoKClient.html">@verificatum/crypto/<wbr/>El<wbr/>GamalZKPoKClient</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_ElGamalZKPoKComp.html">@verificatum/crypto/<wbr/>El<wbr/>GamalZKPoKComp</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_ElGamalZKPoKFactory.html">@verificatum/crypto/<wbr/>El<wbr/>GamalZKPoKFactory</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_ElGamalZKPoKServer.html">@verificatum/crypto/<wbr/>El<wbr/>GamalZKPoKServer</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_ElGamalZKPoKWriteIn.html">@verificatum/crypto/<wbr/>El<wbr/>GamalZKPoKWrite<wbr/>In</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_Hashfunction.html">@verificatum/crypto/<wbr/>Hashfunction</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_SHA256.html">@verificatum/crypto/SHA256</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_SHA256PRG.html">@verificatum/crypto/SHA256PRG</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_SchnorrProof.html">@verificatum/crypto/<wbr/>Schnorr<wbr/>Proof</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_SigmaProof.html">@verificatum/crypto/<wbr/>Sigma<wbr/>Proof</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_SigmaProofAnd.html">@verificatum/crypto/<wbr/>Sigma<wbr/>Proof<wbr/>And</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_SigmaProofPara.html">@verificatum/crypto/<wbr/>Sigma<wbr/>Proof<wbr/>Para</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_ZKPoK.html">@verificatum/crypto/ZKPoK</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_ZKPoKWriteIn.html">@verificatum/crypto/ZKPoKWrite<wbr/>In</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_ZKPoKWriteInAdapter.html">@verificatum/crypto/ZKPoKWrite<wbr/>In<wbr/>Adapter</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev.html">@verificatum/dev</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_bench.html">@verificatum/dev/bench</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_bench_Suite.html">@verificatum/dev/bench/<wbr/>Suite</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_bench_algebra.html">@verificatum/dev/bench/algebra</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_bench_algebra_func.html">@verificatum/dev/bench/algebra/func</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_bench_crypto.html">@verificatum/dev/bench/crypto</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_bench_crypto_func.html">@verificatum/dev/bench/crypto/func</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_bench_func.html">@verificatum/dev/bench/func</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_func.html">@verificatum/dev/func</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test.html">@verificatum/dev/test</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_TestContext.html">@verificatum/dev/test/<wbr/>Test<wbr/>Context</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_algebra.html">@verificatum/dev/test/algebra</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_algebra_TestPGroup.html">@verificatum/dev/test/algebra/<wbr/>TestPGroup</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_algebra_TestPRing.html">@verificatum/dev/test/algebra/<wbr/>TestPRing</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_algebra_test_ByteTree.html">@verificatum/dev/test/algebra/test_<wbr/>Byte<wbr/>Tree</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_algebra_test_ECqPGroup.html">@verificatum/dev/test/algebra/test_<wbr/>ECqPGroup</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_algebra_test_ModPGroup.html">@verificatum/dev/test/algebra/test_<wbr/>ModPGroup</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_algebra_test_PField.html">@verificatum/dev/test/algebra/test_<wbr/>PField</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_algebra_test_PPGroup.html">@verificatum/dev/test/algebra/test_<wbr/>PPGroup</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_algebra_test_PPRing.html">@verificatum/dev/test/algebra/test_<wbr/>PPRing</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_algebra_test_algebra.html">@verificatum/dev/test/algebra/test_<wbr/>algebra</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_arithm.html">@verificatum/dev/test/arithm</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_arithm_primes.html">@verificatum/dev/test/arithm/primes</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_arithm_test_FixModPow.html">@verificatum/dev/test/arithm/test_<wbr/>Fix<wbr/>Mod<wbr/>Pow</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_arithm_test_LI.html">@verificatum/dev/test/arithm/test_<wbr/>LI</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_arithm_test_ModPowProd.html">@verificatum/dev/test/arithm/test_<wbr/>Mod<wbr/>Pow<wbr/>Prod</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_arithm_test_arithm.html">@verificatum/dev/test/arithm/test_<wbr/>arithm</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_arithm_test_uli.html">@verificatum/dev/test/arithm/test_<wbr/>uli</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_crypto.html">@verificatum/dev/test/crypto</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_crypto_input_output_SHA256.html">@verificatum/dev/test/crypto/input_<wbr/>output_<wbr/>SHA256</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_crypto_test_ElGamal.html">@verificatum/dev/test/crypto/test_<wbr/>El<wbr/>Gamal</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_crypto_test_ElGamalZKPoKWriteIn.html">@verificatum/dev/test/crypto/test_<wbr/>El<wbr/>GamalZKPoKWrite<wbr/>In</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_crypto_test_SHA256.html">@verificatum/dev/test/crypto/test_<wbr/>SHA256</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_crypto_test_SchnorrProof.html">@verificatum/dev/test/crypto/test_<wbr/>Schnorr<wbr/>Proof</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_crypto_test_SigmaProof.html">@verificatum/dev/test/crypto/test_<wbr/>Sigma<wbr/>Proof</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_crypto_test_SigmaProofAnd.html">@verificatum/dev/test/crypto/test_<wbr/>Sigma<wbr/>Proof<wbr/>And</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_crypto_test_SigmaProofPara.html">@verificatum/dev/test/crypto/test_<wbr/>Sigma<wbr/>Proof<wbr/>Para</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_crypto_test_crypto.html">@verificatum/dev/test/crypto/test_<wbr/>crypto</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_test_verificatum.html">@verificatum/dev/test/test_<wbr/>verificatum</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_devdom.html">@verificatum/devdom</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_devdom_WorkerTestContext.html">@verificatum/devdom/<wbr/>Worker<wbr/>Test<wbr/>Context</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_devdom_func.html">@verificatum/devdom/func</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_devnode.html">@verificatum/devnode</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_devnode_NodeTestContext.html">@verificatum/devnode/<wbr/>Node<wbr/>Test<wbr/>Context</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_devnode_test.html">@verificatum/devnode/test</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dom.html">@verificatum/dom</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dom_WebAPIElGamalZKPoKClient.html">@verificatum/dom/<wbr/>WebAPIEl<wbr/>GamalZKPoKClient</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dom_WebAPIElGamalZKPoKComp.html">@verificatum/dom/<wbr/>WebAPIEl<wbr/>GamalZKPoKComp</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dom_WebAPIElGamalZKPoKServer.html">@verificatum/dom/<wbr/>WebAPIEl<wbr/>GamalZKPoKServer</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dom_WebAPIRandomDevice.html">@verificatum/dom/<wbr/>WebAPIRandom<wbr/>Device</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_node.html">@verificatum/node</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_node_NodeRandomDevice.html">@verificatum/node/<wbr/>Node<wbr/>Random<wbr/>Device</a></li></ul></nav></div></div></div><footer class="with-border-bottom"><div class="container"><h2>Legend</h2><div class="tsd-legend-group"><ul class="tsd-legend"><li class="tsd-kind-variable"><span class="tsd-kind-icon">Variable</span></li><li class="tsd-kind-function"><span class="tsd-kind-icon">Function</span></li><li class="tsd-kind-function tsd-has-type-parameter"><span class="tsd-kind-icon">Function with type parameter</span></li><li class="tsd-kind-type-alias"><span class="tsd-kind-icon">Type alias</span></li></ul><ul class="tsd-legend"><li class="tsd-kind-class"><span class="tsd-kind-icon">Class</span></li><li class="tsd-kind-class tsd-has-type-parameter"><span class="tsd-kind-icon">Class with type parameter</span></li></ul><ul class="tsd-legend"><li class="tsd-kind-enum"><span class="tsd-kind-icon">Enumeration</span></li></ul><ul class="tsd-legend"><li class="tsd-kind-interface"><span class="tsd-kind-icon">Interface</span></li></ul></div><h2>Settings</h2><p>Theme <select id="theme"><option value="os">OS</option><option value="light">Light</option><option value="dark">Dark</option></select></p></div></footer><div class="container tsd-generator"><p>Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p></div><div class="overlay"></div><script src="assets/main.js"></script></body></html>
