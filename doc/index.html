@@ -2,7 +2,6 @@
 clients. Complete documentation with explicit references to the
 literature on basic arithmetic algorithms makes it good teaching
 material.</p>
-<p><strong>This is still a development repo that may break now and then :-)</strong></p>
 
 <a href="#installation" id="installation" style="color: inherit; text-decoration: none;">
   <h2>Installation</h2>
@@ -16,10 +15,14 @@ material.</p>
 </a>
 <p>The simplest way to use the library is to use one of the single-file
 JavaScript files compiled using <code>make jsfiles</code> which end up in
-<code>pure/dist</code>, but users may also choose to use a bundling tool that
-understands monorepos.</p>
-<p><em>Only here for the fast integer arithmetic? Build using <code>make vts-ba</code>
-and include <code>pure/dist/vts-ba-VERSION.js</code> in your project.</em></p>
+<code>pure/dist</code>.</p>
+<p>Numerous single-file TypeScript and JavaScript versions are also
+provided in compiled form in the directory <code>compiled</code> for convenience,
+e.g., <code>compiled/vts-ba-VERSION.js</code> is the JavaScript library
+containing only the arithmetic code without WebAssembly.</p>
+<p>The big integer arithmetic routines can be used in isolation and are
+available as a separate repository at
+<a href="https://github.com/verificatum/verificatum-vts-ba">https://github.com/verificatum/verificatum-vts-ba</a>.</p>
 
 <a href="#examples" id="examples" style="color: inherit; text-decoration: none;">
   <h3>Examples</h3>
@@ -38,7 +41,8 @@ computer at <a href="http://localhost:8000">http://localhost:8000</a>.</p>
 </ul>
 <p>The source code of the examples is heavily documented to allow simple
 cut and paste and usage in your own client.</p>
-<p><a href="https://verificatum.github.io/web/index.html">You can access the above here!</a></p>
+<p>You can also access the above
+<a href="https://verificatum.github.io/web/index.html">here!</a></p>
 
 <a href="#documentation" id="documentation" style="color: inherit; text-decoration: none;">
   <h3>Documentation</h3>
@@ -54,18 +58,6 @@ the extent possible. Our main source is
 <a href="https://cacr.uwaterloo.ca/hac/">HandBook of Applied Cryptography</a>,
 Alfred J. Menezes, Paul C. van Oorschot and Scott A. Vanstone, which
 is freely available online.</p>
-
-<a href="#integration-with-the-verificatum-mix-net" id="integration-with-the-verificatum-mix-net" style="color: inherit; text-decoration: none;">
-  <h3>Integration with the Verificatum Mix-Net</h3>
-</a>
-<p>A few classes in the library are tailored for simple integration with
-the <a href="https://github.com/verificatum/verificatum-vmn">Verificatum Mix-Net
-(VMN)</a> in which the
-servers jointly generate a marshalled public key that contains the
-group description. If this is then combined with a description of a
-zero knowledge proof the client would proceed with one line of code.</p>
-<pre><code><span class="hl-0">&lt;</span><span class="hl-1">script</span><span class="hl-0"> </span><span class="hl-1">src</span><span class="hl-0">=</span><span class="hl-7">&quot;vts-baac-VERSION.js&quot;</span><span class="hl-0">&gt;&lt;/</span><span class="hl-8">script</span><span class="hl-0">&gt;</span><br/><br/><span class="hl-2">const</span><span class="hl-0"> [</span><span class="hl-5">ciphertext</span><span class="hl-0">, </span><span class="hl-5">digest</span><span class="hl-0">, </span><span class="hl-5">seed</span><span class="hl-0">] = (</span><span class="hl-2">new</span><span class="hl-0"> </span><span class="hl-9">WebAPIElGamalZKPoKClient</span><span class="hl-0">(</span><span class="hl-1">mpk</span><span class="hl-0">)).</span><span class="hl-9">encrypt</span><span class="hl-0">(</span><span class="hl-1">label</span><span class="hl-0">, </span><span class="hl-1">plaintext</span><span class="hl-0">)</span>
-</code></pre>
 
 <a href="#organisation" id="organisation" style="color: inherit; text-decoration: none;">
   <h2>Organisation</h2>
@@ -121,35 +113,54 @@ invoke the tests or benchmarks, respectively.</p>
 <a href="#javascript-from-monorepo" id="javascript-from-monorepo" style="color: inherit; text-decoration: none;">
   <h5>JavaScript from Monorepo</h5>
 </a>
-<p>  You may use <code>make jsmodules</code> to compile the TypeScript modules into
-  JavaScript modules which end up in <code>packages/&lt;package&gt;/dist</code>. A
-  directory <code>@verificatum</code> is generated with symbolic links to these
-  directories to simulate a rudimentary form of packaging that allows
-  using the library directly from Node.</p>
+<p>You may use <code>make jsmodules</code> to compile the TypeScript modules into
+JavaScript modules which end up in <code>packages/&lt;package&gt;/dist</code>. A
+directory <code>@verificatum</code> is generated with symbolic links to these
+directories to simulate a rudimentary form of packaging that allows
+using the library directly from Node.</p>
 
 <a href="#typescript-as-single-file" id="typescript-as-single-file" style="color: inherit; text-decoration: none;">
   <h3>TypeScript as Single File</h3>
 </a>
-<p>The precursor of this library was provided as a single JavaScript file.</p>
-<p>Similar TypeScript files, along with files which includes code from
-the additional packages, can be compiled using <code>make tsfiles</code>. This is
-done using custom scripts found in <code>tools/</code>. These files are found in
-<code>pure/src</code>.</p>
+<p>The precursor of this library was provided as a single JavaScript
+file. Similar TypeScript files configured in various ways can be
+compiled using <code>make tsfiles</code>, but some are also available in the
+repository in the <code>compiled</code> directory for convenience.</p>
+<p>This is done using custom scripts found in <code>tools/</code>. These files are
+found in <code>pure/src</code>. Each filename encodes the contents of the library
+and how it is implemented. More precisely, the filename has the form</p>
+<pre><code><span class="hl-1">vts</span><span class="hl-0">-</span><span class="hl-5">PURE</span><span class="hl-0">[-</span><span class="hl-5">PLATFORM</span><span class="hl-0">]-</span><span class="hl-5">VERSION</span><span class="hl-0">-</span><span class="hl-5">IMPLEMENTATION</span><span class="hl-0">.</span><span class="hl-1">ts</span>
+</code></pre>
+<p>where</p>
 <ul>
-<li><p><code>vts-ba-VERSION.ts</code> - Base routines and large integer arithmetic.</p>
+<li><p><code>PURE</code> is a string that indicates which parts of the library with
+zero external dependencies are included. The available
+configurations are:</p>
+<ul>
+<li><code>ba</code> - Base routines and large integer arithmetic.</li>
+<li><code>baA</code> - Includes algebra, i.e., rings and groups, where <code>A</code> is
+<code>m</code>, <code>e</code>, or <code>me</code> to indicate that multiplicative groups, elliptic
+curve groups, or both are included.</li>
+<li><code>baAc</code> - Includes group-based cryptography.</li>
+<li><code>baAcd</code> - Includes testing and benchmarking routines.</li>
+</ul>
 </li>
-<li><p><code>vts-baa-VERSION.ts</code> - Adds arithmetic for rings and groups.</p>
+<li><p><code>PLATFORM</code> is a string that indicates that routines
+that depend on Node <code>n</code> or WebAPI <code>d</code> are included, if any.</p>
 </li>
-<li><p><code>vts-baac-VERSION.ts</code> - Adds group-based cryptography.</p>
+<li><p><code>VERSION</code> is the version string.</p>
 </li>
-<li><p><code>vts-baacd-VERSION.ts</code> - Adds testing and benchmarking routines.</p>
-</li>
-<li><p><code>vts-baac[d]-[n/d]-VERSION.ts</code> - Adds wrapper for the
-cryptographically strong random generator of Node (<code>n</code>) or WebAPI
-(<code>d</code>) to the <code>vts-baac[d]</code> configuration, with (<code>d</code>), or without,
-testing and benchmarking routines.</p>
+<li><p><code>IMPLEMENTATION</code> is a string of the form <code>(p/a)WORDSIZE</code>, where <code>p</code> or
+<code>a</code> indicates pure TypeScript or WebAssembly is generated, and
+<code>WORDSIZE</code> is the wordsize used internally (an even integer between 8
+and 30).</p>
 </li>
 </ul>
+<p>The implementation configuration does not change the functionality of
+the library, but it is valuable for testing and optimization
+purposes.</p>
+<p>Reducing the library to what is actually used in a testable way is
+prudent from a security point of view.</p>
 
 <a href="#javascript-from-single-file" id="javascript-from-single-file" style="color: inherit; text-decoration: none;">
   <h5>JavaScript from Single File</h5>
@@ -161,9 +172,11 @@ library VJSC. The resulting files are found in <code>pure/dist</code>.</p>
 <a href="#minified-javascript-variants" id="minified-javascript-variants" style="color: inherit; text-decoration: none;">
   <h5>Minified JavaScript Variants</h5>
 </a>
-<p>The JavaScript files may be minified by adding the postfix <code>-m-</code> to
-the configuration, e.g., <code>make vts-ba-m</code> compiles <code>vts-ba-m-VERSION.js</code>
-which is a minified version of <code>vts-ba-VERSION.js</code>.</p>
+<p>The JavaScript files may be minified. The resulting filename contains
+the subscript <code>m</code> in the name, e.g.,
+<code>vts-ba-VERSION-IMPLEMENTATIONm.js</code> is a minified version of
+<code>vts-ba-VERSION-IMPLEMENTATION.js</code>. Thus, for JavaScript minification
+is effectively an additional implementation configuration.</p>
 <p>We use Uglify, <a href="https://github.com/mishoo/UglifyJS">https://github.com/mishoo/UglifyJS</a>. This is a
 relatively conservative minifier, but you should of course run the
 tests and benchmarks on the minified code using <code>make check_filesm</code>
@@ -279,11 +292,13 @@ been added to simplify adoption and deployment.</p>
 <a href="#license" id="license" style="color: inherit; text-decoration: none;">
   <h2>License</h2>
 </a>
-<p>Copyright Douglas Wikström. All rights reserved. We have not decided
-yet how to share this work. Feel free to suggest a license that you
-think is suitable.</p>
+<p>Copyright Douglas Wikström. All rights reserved. Contact us if you are
+interested in sponsoring the release of this software as open source
+software.</p>
 
 <a href="#acknowledgments" id="acknowledgments" style="color: inherit; text-decoration: none;">
   <h2>Acknowledgments</h2>
 </a>
+<p>We thank Torbjörn Granlund for helpful advise about the big integer
+arithmetic code.</p>
 </div></div><div class="col-4 col-menu menu-sticky-wrap menu-highlight"><nav class="tsd-navigation primary"><ul><li class="current"><a href="modules.html">Modules</a></li><li class=" tsd-kind-module"><a href="modules/_types.html">@types</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum.html">@verificatum</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra.html">@verificatum/algebra</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ByteTree.html">@verificatum/algebra/<wbr/>Byte<wbr/>Tree</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ByteTreeIndex.html">@verificatum/algebra/<wbr/>Byte<wbr/>Tree<wbr/>Index</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ECqPGroup.html">@verificatum/algebra/ECqPGroup</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ECqPGroupElement.html">@verificatum/algebra/ECqPGroup<wbr/>Element</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ECqPGroup_named.html">@verificatum/algebra/ECqPGroup_<wbr/>named</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ExpHom.html">@verificatum/algebra/<wbr/>Exp<wbr/>Hom</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_Hom.html">@verificatum/algebra/<wbr/>Hom</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ModPGroup.html">@verificatum/algebra/<wbr/>ModPGroup</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ModPGroupElement.html">@verificatum/algebra/<wbr/>ModPGroup<wbr/>Element</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ModPGroup_named.html">@verificatum/algebra/<wbr/>ModPGroup_<wbr/>named</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_PField.html">@verificatum/algebra/PField</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_PFieldElement.html">@verificatum/algebra/PField<wbr/>Element</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_PGroup.html">@verificatum/algebra/PGroup</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_PGroupElement.html">@verificatum/algebra/PGroup<wbr/>Element</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_PGroupFactory.html">@verificatum/algebra/PGroup<wbr/>Factory</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_PPGroup.html">@verificatum/algebra/PPGroup</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_PPGroupElement.html">@verificatum/algebra/PPGroup<wbr/>Element</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_PPRing.html">@verificatum/algebra/PPRing</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_PPRingElement.html">@verificatum/algebra/PPRing<wbr/>Element</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_PRing.html">@verificatum/algebra/PRing</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_PRingElement.html">@verificatum/algebra/PRing<wbr/>Element</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_PowProdHom.html">@verificatum/algebra/<wbr/>Pow<wbr/>Prod<wbr/>Hom</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ec.html">@verificatum/algebra/ec</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ec_EC.html">@verificatum/algebra/ec/EC</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ec_ECP.html">@verificatum/algebra/ec/ECP</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_algebra_ec_func.html">@verificatum/algebra/ec/func</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_arithm.html">@verificatum/arithm</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_arithm_FixModPow.html">@verificatum/arithm/<wbr/>Fix<wbr/>Mod<wbr/>Pow</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_arithm_LI.html">@verificatum/arithm/LI</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_arithm_ModPowProd.html">@verificatum/arithm/<wbr/>Mod<wbr/>Pow<wbr/>Prod</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_arithm_li.html">@verificatum/arithm/li</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_arithm_li_SLI.html">@verificatum/arithm/li/SLI</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_arithm_li_func.html">@verificatum/arithm/li/func</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_arithm_uli.html">@verificatum/arithm/uli</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_arithm_uli_func.html">@verificatum/arithm/uli/func</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_base.html">@verificatum/base</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_base_RandomSource.html">@verificatum/base/<wbr/>Random<wbr/>Source</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_base_VerificatumObject.html">@verificatum/base/<wbr/>Verificatum<wbr/>Object</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_base_func.html">@verificatum/base/func</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_base_version.html">@verificatum/base/version</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto.html">@verificatum/crypto</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_ElGamal.html">@verificatum/crypto/<wbr/>El<wbr/>Gamal</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_ElGamalZKPoK.html">@verificatum/crypto/<wbr/>El<wbr/>GamalZKPoK</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_ElGamalZKPoKAdapter.html">@verificatum/crypto/<wbr/>El<wbr/>GamalZKPoKAdapter</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_ElGamalZKPoKClient.html">@verificatum/crypto/<wbr/>El<wbr/>GamalZKPoKClient</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_ElGamalZKPoKComp.html">@verificatum/crypto/<wbr/>El<wbr/>GamalZKPoKComp</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_ElGamalZKPoKFactory.html">@verificatum/crypto/<wbr/>El<wbr/>GamalZKPoKFactory</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_ElGamalZKPoKServer.html">@verificatum/crypto/<wbr/>El<wbr/>GamalZKPoKServer</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_ElGamalZKPoKWriteIn.html">@verificatum/crypto/<wbr/>El<wbr/>GamalZKPoKWrite<wbr/>In</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_Hashfunction.html">@verificatum/crypto/<wbr/>Hashfunction</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_SHA256.html">@verificatum/crypto/SHA256</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_SHA256PRG.html">@verificatum/crypto/SHA256PRG</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_SchnorrProof.html">@verificatum/crypto/<wbr/>Schnorr<wbr/>Proof</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_SchnorrSignatureScheme.html">@verificatum/crypto/<wbr/>Schnorr<wbr/>Signature<wbr/>Scheme</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_SigmaProof.html">@verificatum/crypto/<wbr/>Sigma<wbr/>Proof</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_SigmaProofAnd.html">@verificatum/crypto/<wbr/>Sigma<wbr/>Proof<wbr/>And</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_SigmaProofPara.html">@verificatum/crypto/<wbr/>Sigma<wbr/>Proof<wbr/>Para</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_SignatureScheme.html">@verificatum/crypto/<wbr/>Signature<wbr/>Scheme</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_ZKPoK.html">@verificatum/crypto/ZKPoK</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_ZKPoKWriteIn.html">@verificatum/crypto/ZKPoKWrite<wbr/>In</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_crypto_ZKPoKWriteInAdapter.html">@verificatum/crypto/ZKPoKWrite<wbr/>In<wbr/>Adapter</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev.html">@verificatum/dev</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_bench.html">@verificatum/dev/bench</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_bench_Suite.html">@verificatum/dev/bench/<wbr/>Suite</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_bench_algebra.html">@verificatum/dev/bench/algebra</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_bench_algebra_func.html">@verificatum/dev/bench/algebra/func</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_bench_crypto.html">@verificatum/dev/bench/crypto</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_bench_crypto_func.html">@verificatum/dev/bench/crypto/func</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_bench_func.html">@verificatum/dev/bench/func</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_func.html">@verificatum/dev/func</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test.html">@verificatum/dev/test</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_TestContext.html">@verificatum/dev/test/<wbr/>Test<wbr/>Context</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_algebra.html">@verificatum/dev/test/algebra</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_algebra_TestPGroup.html">@verificatum/dev/test/algebra/<wbr/>TestPGroup</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_algebra_TestPRing.html">@verificatum/dev/test/algebra/<wbr/>TestPRing</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_algebra_test_ByteTree.html">@verificatum/dev/test/algebra/test_<wbr/>Byte<wbr/>Tree</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_algebra_test_ECqPGroup.html">@verificatum/dev/test/algebra/test_<wbr/>ECqPGroup</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_algebra_test_ModPGroup.html">@verificatum/dev/test/algebra/test_<wbr/>ModPGroup</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_algebra_test_PField.html">@verificatum/dev/test/algebra/test_<wbr/>PField</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_algebra_test_PPGroup.html">@verificatum/dev/test/algebra/test_<wbr/>PPGroup</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_algebra_test_PPRing.html">@verificatum/dev/test/algebra/test_<wbr/>PPRing</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_algebra_test_algebra.html">@verificatum/dev/test/algebra/test_<wbr/>algebra</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_arithm.html">@verificatum/dev/test/arithm</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_arithm_primes.html">@verificatum/dev/test/arithm/primes</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_arithm_test_FixModPow.html">@verificatum/dev/test/arithm/test_<wbr/>Fix<wbr/>Mod<wbr/>Pow</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_arithm_test_LI.html">@verificatum/dev/test/arithm/test_<wbr/>LI</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_arithm_test_ModPowProd.html">@verificatum/dev/test/arithm/test_<wbr/>Mod<wbr/>Pow<wbr/>Prod</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_arithm_test_arithm.html">@verificatum/dev/test/arithm/test_<wbr/>arithm</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_arithm_test_uli.html">@verificatum/dev/test/arithm/test_<wbr/>uli</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_crypto.html">@verificatum/dev/test/crypto</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_crypto_input_output_SHA256.html">@verificatum/dev/test/crypto/input_<wbr/>output_<wbr/>SHA256</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_crypto_test_ElGamal.html">@verificatum/dev/test/crypto/test_<wbr/>El<wbr/>Gamal</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_crypto_test_ElGamalZKPoKWriteIn.html">@verificatum/dev/test/crypto/test_<wbr/>El<wbr/>GamalZKPoKWrite<wbr/>In</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_crypto_test_SHA256.html">@verificatum/dev/test/crypto/test_<wbr/>SHA256</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_crypto_test_SchnorrProof.html">@verificatum/dev/test/crypto/test_<wbr/>Schnorr<wbr/>Proof</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_crypto_test_SigmaProof.html">@verificatum/dev/test/crypto/test_<wbr/>Sigma<wbr/>Proof</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_crypto_test_SigmaProofAnd.html">@verificatum/dev/test/crypto/test_<wbr/>Sigma<wbr/>Proof<wbr/>And</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_crypto_test_SigmaProofPara.html">@verificatum/dev/test/crypto/test_<wbr/>Sigma<wbr/>Proof<wbr/>Para</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_crypto_test_crypto.html">@verificatum/dev/test/crypto/test_<wbr/>crypto</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dev_test_test_verificatum.html">@verificatum/dev/test/test_<wbr/>verificatum</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_devdom.html">@verificatum/devdom</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_devdom_WorkerTestContext.html">@verificatum/devdom/<wbr/>Worker<wbr/>Test<wbr/>Context</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_devdom_func.html">@verificatum/devdom/func</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_devnode.html">@verificatum/devnode</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_devnode_NodeTestContext.html">@verificatum/devnode/<wbr/>Node<wbr/>Test<wbr/>Context</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_devnode_test.html">@verificatum/devnode/test</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dom.html">@verificatum/dom</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dom_WebAPIElGamalZKPoKClient.html">@verificatum/dom/<wbr/>WebAPIEl<wbr/>GamalZKPoKClient</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dom_WebAPIElGamalZKPoKComp.html">@verificatum/dom/<wbr/>WebAPIEl<wbr/>GamalZKPoKComp</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dom_WebAPIElGamalZKPoKServer.html">@verificatum/dom/<wbr/>WebAPIEl<wbr/>GamalZKPoKServer</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_dom_WebAPIRandomDevice.html">@verificatum/dom/<wbr/>WebAPIRandom<wbr/>Device</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_node.html">@verificatum/node</a></li><li class=" tsd-kind-module"><a href="modules/_verificatum_node_NodeRandomDevice.html">@verificatum/node/<wbr/>Node<wbr/>Random<wbr/>Device</a></li></ul></nav></div></div></div><footer class="with-border-bottom"><div class="container"><h2>Legend</h2><div class="tsd-legend-group"><ul class="tsd-legend"><li class="tsd-kind-variable"><span class="tsd-kind-icon">Variable</span></li><li class="tsd-kind-function"><span class="tsd-kind-icon">Function</span></li><li class="tsd-kind-function tsd-has-type-parameter"><span class="tsd-kind-icon">Function with type parameter</span></li><li class="tsd-kind-type-alias"><span class="tsd-kind-icon">Type alias</span></li></ul><ul class="tsd-legend"><li class="tsd-kind-class"><span class="tsd-kind-icon">Class</span></li><li class="tsd-kind-class tsd-has-type-parameter"><span class="tsd-kind-icon">Class with type parameter</span></li></ul><ul class="tsd-legend"><li class="tsd-kind-enum"><span class="tsd-kind-icon">Enumeration</span></li></ul><ul class="tsd-legend"><li class="tsd-kind-interface"><span class="tsd-kind-icon">Interface</span></li></ul></div><h2>Settings</h2><p>Theme <select id="theme"><option value="os">OS</option><option value="light">Light</option><option value="dark">Dark</option></select></p></div></footer><div class="container tsd-generator"><p>Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p></div><div class="overlay"></div><script src="assets/main.js"></script></body></html>

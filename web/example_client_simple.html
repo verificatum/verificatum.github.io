@@ -7,19 +7,20 @@
     <title>Examples for VTS: Simple Use of Client Class</title>
     <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
     <link rel="stylesheet" href="test.css">
-    <script src="vts-baac-d-0.0.2.js"></script>
+    <script src="vts-baac-d-1.0.0-p28.js"></script>
   </head>
   <body>
     
     <h1>Examples for VTS: Simple Use of Client Class</h1>
     <p>
       <b><i>Verificatum TypeScript Cryptographic Library</i></b><br>
-      <b><i>Version:  <span id="version"></span></i></b>
+      <b><i>Version:  <span id="version"></span></i></b><br>
+      <b><i>WASM: <span id="wasm"></span></i></b>
     </p>
     <p>
       This gives a simplistic example of a client.  Please view the
       source for detailed comments. The version of the library used is
-      <code>vts-baac-d-0.0.2.js</code>. Users should follow
+      <code>vts-baac-d-1.0.0-p28.js</code>. Users should follow
       the instructions in the <code>Makefile</code> to only load the
       functionality and groups that they need. We use the
       group <code>modp3072</code> for simplicity.
@@ -139,7 +140,12 @@
     // simplest possible way.
     
     document.getElementById("version").innerHTML = verificatum.base.version;
-    
+    if (verificatum.arithm.uli.wasm) {
+	document.getElementById("wasm").innerHTML = "enabled";
+    } else {
+	document.getElementById("wasm").innerHTML = "disabled";
+    }
+
     // Utility functions for HTML/JavaScript.
     function radioValue(name) {
 	const radioButtons =

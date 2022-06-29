@@ -7,14 +7,15 @@
     <title>Examples for VTS: Using Client Class</title>
     <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
     <link rel="stylesheet" href="test.css">
-    <script src="vts-baac-d-0.0.2.js"></script>
+    <script src="vts-baac-d-1.0.0-p28.js"></script>
   </head>
   <body>
     
     <h1>Examples for VTS: Using Client Class</h1>
     <p>
       <b><i>Verificatum TypeScript Cryptographic Library</i></b><br>
-      <b><i>Version:  <span id="version"></span></i></b>
+      <b><i>Version:  <span id="version"></span></i></b><br>
+      <b><i>WASM: <span id="wasm"></span></i></b>
     </p>
     <p>
       This example shows how the library can be configured and used
@@ -44,7 +45,7 @@
       by loading the library and the following line of code.
       <b>
 	<pre>
-&lt;script src="vts-baac-d-0.0.2.js"&gt;&lt;/script&gt;
+&lt;script src="vts-baac-d-1.0.0-p28.js"&gt;&lt;/script&gt;
 
 &lt;script&gt;
    [ciphertext, digest, seed] = ((new WebAPIElGamalZKPoKClient(mpk)).encrypt(label, plaintext)
@@ -54,7 +55,7 @@
     <p>
       Please view the source for detailed comments. The version of the
       library used is
-      <code>vts-baac-d-0.0.2.js</code>. Users should follow
+      <code>vts-baac-d-1.0.0-p28.js</code>. Users should follow
       the instructions in the <code>Makefile</code> to only load the
       functionality and groups that they need.
     </p>
@@ -244,6 +245,11 @@
     // client to ensure usability for all.
 
     document.getElementById("version").innerHTML = verificatum.base.version;
+    if (verificatum.arithm.uli.wasm) {
+	document.getElementById("wasm").innerHTML = "enabled";
+    } else {
+	document.getElementById("wasm").innerHTML = "disabled";
+    }
     
     // Utility functions for HTML/JavaScript.
     function radioValue(name) {
@@ -332,7 +338,7 @@
 	if (checkboxValue("precomp")) {
 	    let root = window.location.href;
 	    root = root.slice(0, root.lastIndexOf("/"));
-	    const script = "vts-baacd-d-0.0.2.js"
+	    const script = "vts-baacd-d-1.0.0-p28.js"
 	    client = new WebAPIElGamalZKPoKClient(mpk, root, script);
 
 	    

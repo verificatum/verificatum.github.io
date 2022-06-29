@@ -3,39 +3,32 @@ var verificatum;
 (function(verificatum) {
     let base;
     (function(base) {
-        // Copyright 2008-2022 Douglas Wikstrom
-        base.version = "0.0.2";
-        // Copyright 2008-2022 Douglas Wikstrom
+        base.version = "1.0.0";
         /**
          * Base class for all objects in the library.
          */
         class VerificatumObject {
-            constructor() {
-                /**
-                 * Returns the name of this class.
-                 *
-                 * @returns Name of this class.
-                 */
-                this.getName = function() {
-                    return this.constructor.name;
-                };
+            /**
+             * Returns the name of this class.
+             *
+             * @returns Name of this class.
+             */
+            getName() {
+                return this.constructor.name;
             }
         }
         base.VerificatumObject = VerificatumObject;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Abstract random source for cryptographic use.
          */
         class RandomSource {}
         base.RandomSource = RandomSource;
-        // Copyright 2008-2022 Douglas Wikstrom
         /**
          * Utility classes and functions.
          * TSDOC_MODULE
          */
-        ;
         /* eslint-disable @typescript-eslint/no-explicit-any */
+        /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
         /**
          * Tests if an object is an instance of the given class.
          *
@@ -94,6 +87,7 @@ var verificatum;
             }
         }
         base.ofType = ofType;
+        /* eslint-enable @typescript-eslint/explicit-module-boundary-types */
         /* eslint-enable @typescript-eslint/no-explicit-any */
         /**
          * Verifies that an array of numbers is an array of bytes.
@@ -434,7 +428,6 @@ var verificatum;
             var byteArrayToHex = verificatum.base.byteArrayToHex;
             var change_wordsize = verificatum.base.change_wordsize;
             var hexToByteArray = verificatum.base.hexToByteArray;
-            // Copyright 2008-2022 Douglas Wikstrom
             /**
              * Provides the core large integer arithmetic routines needed to
              * implement multiplicative groups and elliptic curve groups over
@@ -550,10 +543,8 @@ var verificatum;
              * </table>
              * TSDOC_MODULE
              */
-            ;
             // Removed WASM code here.
             // Enabled TypeScript code starts here.
-            ;
             // Enabled TypeScript code ends here
             // ################### Constants ########################################
             /**
@@ -598,7 +589,7 @@ var verificatum;
             function set(w, x) {
                 if (typeof x === "number") {
                     setzero(w);
-                    w[0] = x;
+                    w[0] = x & 0xfffffff;
                 } else {
                     let i = 0;
                     while (i < Math.min(w.length, x.length)) {
@@ -1899,7 +1890,7 @@ var verificatum;
              * <p>
              *
              * ASSUMES: x and y are positive, x has L words and at least L + 2
-             * limbs (i.e., two leading unused zero words), y has L' limbs, and q
+             * limbs (i.e., two leading unused zero words), y has L' words, and q
              * has at least L'' = max{L - L', 0} + 1 limbs and will finally hold
              * a result with at most L'' words and a leading zero limb.
              *
@@ -1911,6 +1902,7 @@ var verificatum;
              * @param x - Divident and holder of remainder at end of computation.
              * @param y - Divisor.
              */
+            /* eslint-disable sonarjs/cognitive-complexity */
             uli.div_qr = (function() {
                 // y from the previous call.
                 let old_y = [];
@@ -2074,6 +2066,7 @@ var verificatum;
                     shiftright(x, normdist);
                 };
             })();
+            /* eslint-enable sonarjs/cognitive-complexity */
             /**
              * Sets w = b^e mod m.
              *
@@ -2162,7 +2155,8 @@ var verificatum;
              *
              * <p>
              *
-             * ASSUMES: b >= 0, e >= 0, and m > 1, and w, b and m have L limbs.
+             * ASSUMES: 0 < b < m, e >= 0, and m > 1, and w, b and m have L limbs
+             * and e may have an arbirary number of limbs.
              *
              * <p>
              *
@@ -2173,6 +2167,7 @@ var verificatum;
              * @param e - Exponent.
              * @param m - Modulus.
              */
+            /* eslint-disable sonarjs/cognitive-complexity */
             uli.modpow = (function() {
                 // We use p to store squares, products, and their remainders, q to
                 // store quotients during modular reduction, and A to store
@@ -2213,21 +2208,20 @@ var verificatum;
                         k++;
                     }
                     // Initialize or resize temporary space as needed.
-                    if (B.length < (1 << k) || A[0].length !== m.length) {
+                    if (q.length !== m.length) {
                         resize(q, m.length);
                         resize(A[0], 2 * m.length + 2);
                         resize(A[1], 2 * m.length + 2);
-                        const len = B.length;
-                        for (let i = 0; i < len; i++) {
-                            if (B[i].length !== m.length) {
-                                resize(B[i], m.length);
-                            }
+                        for (let i = 0; i < B.length; i++) {
+                            resize(B[i], m.length);
                         }
-                        if (len < 1 << k) {
-                            B.length = 1 << k;
-                            for (let i = len; i < B.length; i++) {
-                                B[i] = newarray(m.length);
-                            }
+                    }
+                    // Expand the table if needed.
+                    if (B.length < (1 << k)) {
+                        const len = B.length;
+                        B.length = 1 << k;
+                        for (let i = len; i < B.length; i++) {
+                            B[i] = newarray(m.length);
                         }
                     }
                     // Precompute table
@@ -2239,8 +2233,8 @@ var verificatum;
                     square(p, b, m.length);
                     uli.div_qr(q, p, m);
                     set(B[2], p);
-                    // B[i] = B[i - 1] * b^2 mod m
-                    for (let i = 1; i < 1 << k - 1; i++) {
+                    // B[i] = B[i - 1] * b^2 mod m for odd i
+                    for (let i = 1; i < 1 << (k - 1); i++) {
                         mul(p, B[2 * i - 1], B[2], m.length);
                         uli.div_qr(q, p, m);
                         set(B[2 * i + 1], p);
@@ -2251,11 +2245,11 @@ var verificatum;
                     A[s][0] = 1;
                     // Iterate through the bits of e starting from the most
                     // significant block of bits.
-                    const n = Math.floor((msbit(e) + k - 1) / k);
+                    const n = Math.floor((msb + k - 1) / k);
                     const uh = [0, 0];
                     for (let i = n; i >= 0; i--) {
                         // Extract the ith block of bits w and represent it as w =
-                        // uh[0] * 2^uh[1], with uh[0] odd and with uh[0] = uh[1]
+                        // 2^uh[1] * uh[0], with uh[0] odd and with uh[0] = uh[1]
                         // = 0 when w = 0.
                         getuh(uh, e, i, k);
                         // A = A^E mod m, where E = 2^(k - uh[1]).
@@ -2280,23 +2274,30 @@ var verificatum;
                     set(w, A[s]);
                 };
             })();
+            /* eslint-enable sonarjs/cognitive-complexity */
             /**
              * Returns a table of all possible modular products of a
              * list of bases. More precisely, given a list b of k bases and a
-             * modulus m, it returns [k, t], where t is the table computed as t[x]
+             * modulus m, it returns t, where t is the table computed as t[x]
              * = b[0]^x[0] * ... * b[k-1]^x[k-1] mod m, where x[i] is the ith bit
              * of the integer x.
              *
              * <p>
              *
-             * ASSUMES: m has L limbs and b[i] has L limbs for i = 0,...,k-1 and
-             * all inputs are positive.
+             * We allow this method to allocate memory, since it is expected to be
+             * used rarely relative the amount of computation performed and since
+             * more than one table may be used simultaneously.
+             *
+             * <p>
+             *
+             * ASSUMES: m has L limbs and b[i] has L limbs and all inputs are
+             * positive.
              *
              * @param b - List of bases.
              * @param m - Modulus.
              * @returns t Table for products.
              */
-            uli.modpowprodtab = (function() {
+            uli.modpowprodtab_inner = (function() {
                 // We use p to store products and q to store quotients during
                 // modular reduction.
                 const p = [];
@@ -2328,66 +2329,232 @@ var verificatum;
                 };
             })();
             /**
-             * Computes a simultaneous exponentiation using a table
-             * of pre-computed values t for k bases b[0],...,b[k-1] and modulus m,
-             * i.e., it sets w = b[0]^e[0] * ... * b[k-1]^e[k-1].
+             * Applies {@link modpowprodtab} to subsequences of a given width of
+             * the input and returns the resulting tables as an array.
              *
              * <p>
              *
-             * ASSUMES: m > 1 has L limbs and e[i] has L limbs for i = 0,...,k - 1
-             * and all inputs are positive, and that the table was computed with
-             * the same number k of bases and the same modulusm.
+             * We allow this method to allocate memory, since it is expected to be
+             * used rarely relative the amount of computation performed and since
+             * more than one table may be used simultaneously.
+             *
+             * <p>
+             *
+             * ASSUMES: m has L limbs and b[i] has L limbs and all inputs are
+             * positive, and width <= 28.
+             *
+             * @param b - List of bases.
+             * @param m - Modulus.
+             * @param width - Maximal number of bases used for each table.
+             * @returns t Array of tables for products.
+             */
+            function modpowprodtab(b, m, width) {
+                const t = [];
+                for (let i = 0, j = 0; j < b.length; i++, j += width) {
+                    t[i] = uli.modpowprodtab_inner(b.slice(j, j + width), m);
+                }
+                return t;
+            }
+            uli.modpowprodtab = modpowprodtab;
+            /**
+             * Sets x to the bit-wise concatenation of the inputs, i.e., the jth
+             * least significant bit of the ith word of the output is the ith bit
+             * of e[j].
+             *
+             * <p>
+             *
+             * ASSUMES: e.length <= 28 and x.length >= bitsize, where
+             * is the maximum bitsize of any of the inputs.
+             *
+             * @param x - Stores bit-wise concatenation of the inputs.
+             * @param e - List of integers.
+             * @param bitsize - Maximum bitsize of any of the inputs.
+             */
+            function concbits_inner(x, e, bitsize) {
+                setzero(x);
+                const w = newarray(e.length);
+                // Bit position in each e[j], and word position in x.
+                let k = 0;
+                // Word position in each e[j].
+                for (let i = 0; k < bitsize; i++) {
+                    // Simulate leading zero of e[j] if needed.
+                    for (let j = 0; j < w.length; j++) {
+                        w[j] = i < e[j].length ? e[j][i] : 0;
+                    }
+                    // Bit position within e[j][i] for each j.
+                    for (let b = 0; b < 28 && k < bitsize; b++, k++) {
+                        // Bits at position i * 28 + b from all e[j].
+                        x[k] = 0;
+                        for (let j = w.length - 1; j >= 0; j--) {
+                            x[k] <<= 1;
+                            x[k] |= (w[j] >> b) & 1;
+                        }
+                    }
+                }
+            }
+            /**
+             * Applies {@link concbits} to subsequences of a given width of the
+             * input and returns the resulting large integers as an array.
+             *
+             * <p>
+             *
+             * ASSUMES: width <= 28, x[i].length >= msbit(e[i]) + 1 for
+             * all i, and x.length = (e.length + width-1) / width.
+             *
+             * @param x - Stores bit-wise concatenations of the inputs.
+             * @param e - List of exponents.
+             * @param bitsize - Maximum bitsize of any of the inputs.
+             * @param width - Width of each block that is concatenated separately.
+             */
+            function concbits(x, e, bitsize, width) {
+                for (let i = 0, j = 0; j < e.length; i++, j += width) {
+                    concbits_inner(x[i], e.slice(j, j + width), bitsize);
+                }
+            }
+            /**
+             * Returns maximal index of a most significant bit.
+             *
+             * @param e - Input non-negative integers.
+             * @returns Maximal index of a most significant bit.
+             */
+            function max_msbit(e) {
+                let m = 0;
+                for (let i = 0; i < e.length; i++) {
+                    m = Math.max(m, msbit(e[i]));
+                }
+                return m;
+            }
+            /**
+             * Computes a simultaneous exponentiation using tables of pre-computed
+             * tables t for at most width bases each, but based on exactly k
+             * bases, and modulus m, i.e., it sets w = b[0]^e[0] * ... *
+             * b[k-1]^e[k-1], where e has length k.
+             *
+             * <p>
+             *
+             * ASSUMES: m > 1 has L limbs and each e[i] has L limbs and all inputs
+             * are positive, and that the table was computed with the same number
+             * of bases and the same modulus m.
              *
              * @param w - Holds the result.
-             * @param t - Table of products.
-             * @param e - List of k exponents.
+             * @param t - Tables of products.
+             * @param e - List of exponents.
              * @param m - Modulus
+             * @param width - Width of each block that is precomputed separately.
              */
             uli.modpowprod = (function() {
-                // We use p to store squares, products, and their remainders, q to
-                // store quotients during modular reduction, and A to store
-                // intermediate results.
-                const p = [];
+                // We use x to store concatenated exponents, q to store quotients
+                // during modular reduction, and a dual representation of A to
+                // store intermediate results.
+                const x = [];
                 const q = [];
-                const A = [];
-                return function(w, t, e, m) {
+                const A = [
+                    [],
+                    []
+                ];
+                return function(w, t, e, m, width) {
+                    // Maximal bitsize of any e[j].
+                    const bitsize = max_msbit(e) + 1;
                     // Initialize or resize temporary space as needed.
-                    if (A.length !== m.length) {
-                        resize(p, 2 * m.length + 2);
+                    if (q.length !== m.length) {
                         resize(q, m.length);
-                        resize(A, m.length);
+                        resize(A[0], 2 * m.length + 2);
+                        resize(A[1], 2 * m.length + 2);
                     }
-                    // Determine maximal most significant bit position.
-                    let l = msbit(e[0]);
-                    for (let i = 1; i < e.length; i++) {
-                        l = Math.max(msbit(e[i]), l);
+                    // Ensure that x has the right number of elements.
+                    while (x.length < t.length) {
+                        x.push([]);
                     }
+                    // Ensure that each x[j] has the right length.
+                    if (x[0].length < bitsize) {
+                        for (let j = 0; j < t.length; j++) {
+                            x[j].length = bitsize;
+                        }
+                    }
+                    // Concatenate exponent bits within each block.
+                    concbits(x, e, bitsize, width);
                     // Set A = 1.
-                    setone(A);
-                    for (let i = l; i >= 0; i--) {
-                        let x = 0;
+                    let s = 0;
+                    setone(A[s]);
+                    for (let i = bitsize - 1; i >= 0; i--) {
                         // A = A^2 mod m.
-                        square(p, A);
-                        uli.div_qr(q, p, m);
-                        set(A, p);
-                        // Loop over exponents to form a word x from all the bits
-                        // at a given position.
-                        for (let j = 0; j < e.length; j++) {
-                            if (getbit(e[j], i) === 1) {
-                                x |= 1 << j;
+                        square(A[s ^ 1], A[s]);
+                        s ^= 1;
+                        uli.div_qr(q, A[s], m);
+                        for (let j = 0; j < t.length; j++) {
+                            if (x[j][i] !== 0) {
+                                // A = A * t[ j ][ x[j][i] ] mod m.
+                                mul(A[s ^ 1], A[s], t[j][x[j][i]]);
+                                s ^= 1;
+                                uli.div_qr(q, A[s], m);
                             }
                         }
-                        // Look up product in pre-computed table if needed.
-                        if (x !== 0) {
-                            // A = A * t[x] mod m.
-                            mul(p, A, t[x]);
-                            uli.div_qr(q, p, m);
-                            set(A, p);
-                        }
                     }
-                    set(w, A);
+                    set(w, A[s]);
                 };
             })();
+            // /**
+            //  * Computes a simultaneous exponentiation using a table
+            //  * of pre-computed values t for k bases b[0],...,b[k-1] and modulus m,
+            //  * i.e., it sets w = b[0]^e[0] * ... * b[k-1]^e[k-1].
+            //  *
+            //  * <p>
+            //  *
+            //  * ASSUMES: m > 1 has L limbs and e[i] has L limbs for i = 0,...,k - 1
+            //  * and all inputs are positive, and that the table was computed with
+            //  * the same number k of bases and the same modulusm.
+            //  *
+            //  * @param w - Holds the result.
+            //  * @param t - Table of products.
+            //  * @param e - List of k exponents.
+            //  * @param m - Modulus
+            //  */
+            // export const modpowprod =
+            //     (function(): (w: uli_t, t: uli_t[], e: uli_t[], m: uli_t) => void {
+            //     // We use p to store squares, products, and their remainders, q to
+            //     // store quotients during modular reduction, and A to store
+            //     // intermediate results.
+            //     const p: uli_t = [];
+            //     const q: uli_t = [];
+            //     const A: uli_t = [];
+            //     return function(w: uli_t, t: uli_t[], e: uli_t[], m: uli_t): void {
+            //         // Initialize or resize temporary space as needed.
+            //         if (A.length !== m.length) {
+            //             resize(p, 2 * m.length + 2);
+            //             resize(q, m.length);
+            //             resize(A, m.length);
+            //         }
+            //         // Determine maximal most significant bit position.
+            //         let l: size_t = msbit(e[0]);
+            //         for (let i: size_t = 1; i < e.length; i++) {
+            //             l = Math.max(msbit(e[i]), l);
+            //         }
+            //         // Set A = 1.
+            //         setone(A);
+            //         for (let i: size_t = l; i >= 0; i--) {
+            //             let x: word_t = 0;
+            //             // A = A^2 mod m.
+            //             square(p, A);
+            //             div_qr(q, p, m);
+            //             set(A, p);
+            //             // Loop over exponents to form a word x from all the bits
+            //             // at a given position.
+            //             for (let j: size_t = 0; j < e.length; j++) {
+            //                 if (getbit(e[j], i) === 1) {
+            //                     x |= 1 << j;
+            //                 }
+            //             }
+            //             // Look up product in pre-computed table if needed.
+            //             if (x !== 0) {
+            //                 // A = A * t[x] mod m.
+            //                 mul(p, A, t[x]);
+            //                 div_qr(q, p, m);
+            //                 set(A, p);
+            //             }
+            //         }
+            //         set(w, A);
+            //     };
+            // })();
             /**
              * Returns the bits between the start index and end index
              * as an integer.
@@ -2428,7 +2595,9 @@ var verificatum;
              * @returns Hexadecimal string representation of the array.
              */
             function hex(x) {
+                /* eslint-disable @typescript-eslint/no-explicit-any */
                 const dense = change_wordsize(x, 28, 8);
+                /* eslint-enable @typescript-eslint/no-explicit-any */
                 normalize(dense);
                 return byteArrayToHex(dense.reverse());
             }
@@ -2514,7 +2683,6 @@ var verificatum;
                 }
             }
             li.SLI = SLI;
-            // Copyright 2008-2022 Douglas Wikstrom
             /**
              * Thin layer on top of the uli module that provides mutable signed
              * integers with basic modular arithmetic along with a few low level
@@ -2551,7 +2719,6 @@ var verificatum;
              * </table>
              * TSDOC_MODULE
              */
-            ;
             // Removed WASM code here.
             /**
              * Truncates the input to the shortest possible array
@@ -2597,8 +2764,7 @@ var verificatum;
             function set(a, b) {
                 if (typeof b === "number") {
                     a.sign = sign(b);
-                    uli_setzero(a.value);
-                    a.value[0] = a.sign * b;
+                    uli_set(a.value, Math.abs(b));
                 } else {
                     a.sign = b.sign;
                     uli_set(a.value, b.value);
@@ -2714,28 +2880,28 @@ var verificatum;
                 const w = a.value;
                 const x = b.value;
                 const y = c.value;
-                // x + y  or  -x + -y.
+                // 0 + 0  or  x + y  or  -x + -y.
                 if (b.sign === c.sign) {
-                    uli_add(w, x, y);
                     if (b.sign === 0) {
-                        a.sign = (-c.sign);
+                        a.sign = 0;
+                        uli_setzero(w);
                     } else {
                         a.sign = b.sign;
+                        uli_add(w, x, y);
                     }
-                    // -x + y  or  x + -y.
+                    // x + -y  or  -x + y
                 } else {
-                    // x >= y.
-                    if (uli_cmp(x, y) >= 0) {
-                        uli_sub(w, x, y);
+                    const s = uli_cmp(x, y);
+                    if (s > 0) {
                         a.sign = b.sign;
-                        // x < y.
-                    } else {
-                        uli_sub(w, y, x);
+                        uli_sub(w, x, y);
+                    } else if (s < 0) {
                         a.sign = c.sign;
+                        uli_sub(w, y, x);
+                    } else {
+                        a.sign = 0;
+                        uli_setzero(w);
                     }
-                }
-                if (uli_iszero(w)) {
-                    a.sign = 0;
                 }
             }
             li.add = add;
@@ -3047,7 +3213,8 @@ var verificatum;
              *
              * <p>
              *
-             * ASSUMES: b >= 0, e >= 0, and m >= 1, and w, b and m have L limbs.
+             * ASSUMES: 0 < b < m, e > 0, and m > 1, m has L limbs, w has at least
+             * L limbs, and b and e have arbitrary number of limbs.
              *
              * @param w - SLI holding the result.
              * @param b - Basis integer.
@@ -3072,6 +3239,7 @@ var verificatum;
              * @param b - An odd prime modulus.
              * @returns Legendre symbol of this instance modulo the input.
              */
+            /* eslint-disable sonarjs/cognitive-complexity */
             function legendre(a, b) {
                 a = copy(a);
                 b = copy(b);
@@ -3110,10 +3278,11 @@ var verificatum;
                 }
             }
             li.legendre = legendre;
+            /* eslint-enable sonarjs/cognitive-complexity */
             /**
              * Sets w to an integer such that w^2 = x mod p, i.e., it
              * computes the square root of an integer modulo a positive odd prime
-             * employing the Shanks-Tonelli algorithm.
+             * employing the Tonelli-Shanks algorithm.
              *
              * @param w - Holding the result.
              * @param x - Integer of which the square root is computed.
@@ -3160,8 +3329,7 @@ var verificatum;
                         add(v, p, ONE);
                         // v = v / 4
                         shiftright(v, 2);
-                        // return a^v mod p
-                        // return --> a^((p + 1) / 4) mod p
+                        // w = a^((p + 1) / 4) mod p
                         modpow(w, a, v, p);
                         return;
                     }
@@ -3355,10 +3523,10 @@ var verificatum;
                     // Now we do all n right shifts at once.
                     for (let j = n; j < n + L; j++) {
                         a[j + 0 - n] = a[j] | 0;
-                    };
+                    }
                     for (let j = L; j < 2 * L; j++) {
                         a[j] = 0;
-                    };
+                    }
                     // Without right shifts a is bounded by 2 * m * m and we shift
                     // n positions. Thus, a < 2 * m which implies that 0 <= a < m
                     // or 0 <= a - m < m. The loop invariant is simplistic to be
@@ -3396,7 +3564,7 @@ var verificatum;
                 // We use a twin representation of A in the algorithm to avoid
                 // that mont_mul() overwrites its input. We use the pattern
                 //
-                // mont_mul(A[b^1], A[b], A[b], m);  b ^= 1;
+                // mont_mul(A[b ^ 1], A[b], A[b], m);  b ^= 1;
                 //
                 // consistently to make sure that A[b] always holds the result. In
                 // each call mont_mul(w, x, y, m) the inputs satisfy the
@@ -3406,21 +3574,20 @@ var verificatum;
                 // - m has l limbs and at most l - 2 words
                 // - 0 <= x, y < m
                 // - x and y has at least l limbs
-                let mt = [];
+                const mt = [];
                 // Temporary variable which is ignored.
-                let q = [];
+                const q = [];
                 // R mod m
-                let Rmodm = [];
+                const Rmodm = [];
                 // R^2 mod m
-                let R2modm = [];
-                let xx = [];
-                let xt = [];
-                let A = [
+                const R2modm = [];
+                const xx = [];
+                const xt = [];
+                const A = [
                     [],
                     []
                 ];
-                let one = [];
-                // 
+                const one = [];
                 return function(w, x, e, m) {
                     // Number of limbs needed to store m.
                     const n = uli_msword(m) + 1;
@@ -3445,6 +3612,7 @@ var verificatum;
                         one[0] = 0x1;
                         // Ignored in further computations.
                         uli_resize(q, L + 2);
+                        old_n = n;
                     }
                     // Cache computations that only depend on m.
                     if (m !== old_m) {
@@ -3517,6 +3685,7 @@ var verificatum;
         var normalize = verificatum.arithm.uli.normalize;
         var ofType = verificatum.base.ofType;
         var uli_WORDSIZE = verificatum.arithm.uli.WORDSIZE;
+        var uli_cmp = verificatum.arithm.uli.cmp;
         var uli_copyarray = verificatum.arithm.uli.copyarray;
         var uli_getbit = verificatum.arithm.uli.getbit;
         var uli_hex = verificatum.arithm.uli.hex;
@@ -3542,6 +3711,8 @@ var verificatum;
          * allocation and provided utility functions.
          */
         class LI extends SLI {
+            /* eslint-disable @typescript-eslint/no-explicit-any */
+            /* eslint-disable sonarjs/cognitive-complexity */
             constructor(...args) {
                 super();
                 let sign;
@@ -3609,7 +3780,7 @@ var verificatum;
                         if (uli_iszero(value) && sign !== 0) {
                             throw Error("A zero array must have a zero sign!");
                         } else if (!uli_iszero(value) && sign === 0) {
-                            throw Error("A zero array must have a zero sign!");
+                            throw Error("A non-zero array must have a non-zero sign!");
                         }
                         // Bit length and RandomSource.
                     } else {
@@ -3640,6 +3811,8 @@ var verificatum;
                 this.value = value;
                 this.length = this.value.length;
             }
+            /* eslint-enable sonarjs/cognitive-complexity */
+            /* eslint-enable @typescript-eslint/no-explicit-any */
             /**
              * Compares this integer with the input.
              *
@@ -3857,65 +4030,71 @@ var verificatum;
                 return this.mul(factor).mod(modulus);
             }
             /**
-             * Computes modular power of this integer raised to the
-             * exponent modulo the given modulus.
+             * Computes modular power of this integer raised to the exponent
+             * modulo the given modulus. This integer must be non-negative.
              *
-             * @param exponent - Exponent.
-             * @param modulus - Integer divisor.
+             * @param exponent - Non-negative exponent.
+             * @param modulus - Integer greater than one.
              * @param alg - Algorithm used. Montgomery exponentiation throws
              * an error if the modulus is even.
              * @returns this ^ exponent mod modulus for positive integers.
              */
             modPow(exponent, modulus, alg = ModPowAlg.window) {
-                if (this.sign < 0) {
-                    throw Error("Negative basis! (" + this.toHexString() + ")");
-                }
-                if (exponent.sign < 0) {
-                    throw Error("Negative exponent! (" + exponent.toHexString() + ")");
-                }
                 if (modulus.sign <= 0) {
                     throw Error("Non-positive modulus! (" +
                         modulus.toHexString() + ")");
                 }
-                // 0^x mod 1 = 0 for every x >= 0 is a special case.
+                // modulus > 0
+                if (this.sign < 0) {
+                    throw Error("Negative basis! (" + this.toHexString() + ")");
+                }
+                // modulus > 0 and 0 <= this
+                if (exponent.sign < 0) {
+                    throw Error("Negative exponent! (" + exponent.toHexString() + ")");
+                }
+                // modulus > 0 and 0 <= this and exponent >= 0
+                const w = uli_newarray(modulus.value.length);
+                let b = this.value;
+                const e = exponent.value;
+                const m = modulus.value;
+                // m > 0, 0 <= b, and e >= 0
+                // 0 <= b < m and b has the same number of limbs as m.
+                if (uli_cmp(b, m) >= 0) {
+                    b = this.divQR(modulus)[1].value;
+                    uli_resize(b, m.length);
+                } else if (b.length < m.length) {
+                    b = uli_newarray(m.length);
+                    uli_set(b, this.value);
+                }
+                // m > 0, 0 <= b < m, and e >= 0
+                // b^e mod 1 = 0 for every 0 <= b < m and e >= 0.
                 if (modulus.equals(LI.ONE)) {
                     return LI.ZERO;
                 }
-                // g^0 mod x = 1 if x > 1.
+                // m > 1, 0 <= b < m, and e >= 0
+                // b^0 mod m = 1 if b >= 0 and m > 0.
                 if (exponent.sign === 0) {
                     return LI.ONE;
                 }
-                // 1^y mod x = 1 if x > 1.
-                if (this.equals(LI.ONE)) {
-                    return LI.ONE;
+                // m > 1, 0 <= b < m, and e > 0
+                // 0^e mod m = 0 if e > 0 and m > 1.
+                if (uli_iszero(b)) {
+                    return LI.ZERO;
                 }
-                const b = this.value;
-                let g = b;
-                const e = exponent.value;
-                const m = modulus.value;
-                // Make sure that 0 <= g < m.
-                if (b.length > m.length) {
-                    g = this.divQR(modulus)[1].value;
-                    uli_resize(g, m.length);
-                } else if (b.length < m.length) {
-                    g = uli_newarray(m.length);
-                    uli_set(g, b);
-                }
-                // Destination of final result.
-                const w = uli_newarray(m.length);
+                // m > 1, 0 < b < m, and e > 0
                 switch (alg) {
                     // Square and multiply.
                     case ModPowAlg.naive:
-                        uli_modpow_naive(w, g, e, m);
+                        uli_modpow_naive(w, b, e, m);
                         break;
                         // Windowing exponentiation.
                     case ModPowAlg.window:
-                        uli_modpow(w, g, e, m);
+                        uli_modpow(w, b, e, m);
                         break;
                         // Montgomery exponentiation requires an odd modulus.
                     case ModPowAlg.montgomery:
                         if ((m[0] & 0x1) == 1) {
-                            li_modpow_mont(w, g, e, m);
+                            li_modpow_mont(w, b, e, m);
                         } else {
                             throw Error("Montgomery exponentiation does not work" +
                                 "for even moduli! (m = 0x" + uli_hex(m) + ")");
@@ -4018,7 +4197,9 @@ var verificatum;
                 const MASK_TOP_8 = 0x80;
                 // Convert the representation with uli_WORDSIZE words into a
                 // representation with 8-bit words.
+                /* eslint-disable @typescript-eslint/no-explicit-any */
                 const dense = change_wordsize(this.value, uli_WORDSIZE, 8);
+                /* eslint-enable @typescript-eslint/no-explicit-any */
                 if (typeof byteSize === "undefined") {
                     // Remove or add as many leading bytes as needed.
                     uli_normalize(dense, MASK_TOP_8);
@@ -4059,8 +4240,6 @@ var verificatum;
          */
         LI.TWO = new LI(1, [2]);
         arithm.LI = LI;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Pre-computes values to be used for simultaneous exponentiation for
          * a given list b of k bases and a modulus m. The method {@link
@@ -4080,14 +4259,15 @@ var verificatum;
          * @param modulus - Modulus.
          */
         class ModPowProd {
-            constructor(bases, modulus) {
+            constructor(bases, modulus, width) {
                 const b = [];
                 for (let i = 0; i < bases.length; i++) {
                     b[i] = bases[i].value;
                 }
-                this.width = bases.length;
-                this.t = modpowprodtab(b, modulus.value);
+                this.noBases = bases.length;
                 this.modulus = modulus;
+                this.width = Math.min(width, ModPowProd.maxWidth);
+                this.t = modpowprodtab(b, modulus.value, this.width);
             }
             /**
              * Computes a power-product using the given exponents.
@@ -4096,16 +4276,16 @@ var verificatum;
              * @returns Power product.
              */
             modPowProd(exponents) {
-                if (exponents.length !== this.width) {
+                if (exponents.length !== this.noBases) {
                     throw Error("Wrong number of exponents! (" +
-                        exponents.length + " != " + this.width + ")");
+                        exponents.length + " != " + this.noBases + ")");
                 }
                 const e = [];
                 for (let i = 0; i < exponents.length; i++) {
                     e[i] = exponents[i].value;
                 }
                 const res = new LI(this.modulus.length);
-                modpowprod(res.value, this.t, e, this.modulus.value);
+                modpowprod(res.value, this.t, e, this.modulus.value, this.width);
                 if (iszero(res.value)) {
                     res.sign = 0;
                 } else {
@@ -4114,27 +4294,9 @@ var verificatum;
                 normalize(res.value);
                 return res;
             }
-            /**
-             * Compute a power-product using the given bases, exponents, and
-             * modulus. This is a naive implementation for simple use and to
-             * debug {@link ModPowProd.modPowProd}.
-             *
-             * @param bases - Bases.
-             * @param exponents - Exponents.
-             * @param modulus - Modulus.
-             * @returns Power product.
-             */
-            static naive(bases, exponents, modulus) {
-                let result = LI.ONE;
-                for (let i = 0; i < bases.length; i++) {
-                    result = result.modMul(bases[i].modPow(exponents[i], modulus), modulus);
-                }
-                return result;
-            }
         }
+        ModPowProd.maxWidth = 16;
         arithm.ModPowProd = ModPowProd;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Fixed-basis exponentiation based on simultantaneous
          * exponentiation with exponent slicing.
@@ -4163,7 +4325,7 @@ var verificatum;
                 }
                 // Invoke the pre-computation of the simultaneous exponentiation
                 // code.
-                this.mpp = new ModPowProd(bases, modulus);
+                this.mpp = new ModPowProd(bases, modulus, width);
             }
             /**
              * Cuts an input integer into the appropriate number of
@@ -4255,8 +4417,6 @@ var verificatum;
             var set = verificatum.arithm.li.set;
             var shiftleft = verificatum.arithm.li.shiftleft;
             var sub = verificatum.arithm.li.sub;
-            // Copyright 2008-2022 Douglas Wikstrom
-            ;
             /**
              * Raw container class for elliptic curves.
              *
@@ -4386,8 +4546,6 @@ var verificatum;
                 }
             }
             ec.EC = EC;
-            // Copyright 2008-2022 Douglas Wikstrom
-            ;
             /**
              * Container class for raw elliptic curve points.
              * @param len - Number of limbs to be used to represent the coordinates
@@ -4413,7 +4571,6 @@ var verificatum;
                 }
             }
             ec.ECP = ECP;
-            // Copyright 2008-2022 Douglas Wikstrom
             /**
              * Raw implementation of elliptic curves over prime order fields in
              * Jacobi coordinates, i.e., the affine coordinates (x, y) corresponds
@@ -4452,7 +4609,6 @@ var verificatum;
              * modular reductions.
              * TSDOC_MODULE
              */
-            ;
             /**
              * Changes the representation of the point to canonical
              * coordinates, i.e. the unique representation where z is 1 and (x,y)
@@ -4812,8 +4968,6 @@ var verificatum;
         var readUint32FromByteArray = verificatum.base.readUint32FromByteArray;
         var setUint16ToByteArray = verificatum.base.setUint16ToByteArray;
         var setUint32ToByteArray = verificatum.base.setUint32ToByteArray;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         class ByteTreeIndex {
             constructor(byteTree, index) {
                 this.byteTree = byteTree;
@@ -4821,8 +4975,6 @@ var verificatum;
             }
         }
         algebra.ByteTreeIndex = ByteTreeIndex;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Class for representing ordered trees of byte arrays. A
          * byte tree is represented as an array of bytes as follows.
@@ -5179,8 +5331,6 @@ var verificatum;
         ByteTree.LEAF = 1;
         ByteTree.NODE = 0;
         algebra.ByteTree = ByteTree;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Ring of prime characteristic.
          */
@@ -5190,7 +5340,6 @@ var verificatum;
             }
         }
         algebra.PRing = PRing;
-        // Copyright 2008-2022 Douglas Wikstrom
         /**
          * Element of ring of {@link PRing}.
          */
@@ -5223,8 +5372,6 @@ var verificatum;
             }
         }
         algebra.PRingElement = PRingElement;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Prime order field.
          */
@@ -5297,8 +5444,6 @@ var verificatum;
             }
         }
         algebra.PField = PField;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Element of {@link PField}.
          */
@@ -5353,8 +5498,6 @@ var verificatum;
             }
         }
         algebra.PFieldElement = PFieldElement;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         // This code would become more complex using map, some, etc without
         // any gain in speed.
         /**
@@ -5495,8 +5638,6 @@ var verificatum;
             }
         }
         algebra.PPRing = PPRing;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         // This code would become more complex using map, some, etc without
         // any gain in speed.
         /**
@@ -5602,8 +5743,6 @@ var verificatum;
             }
         }
         algebra.PPRingElement = PPRingElement;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Abstract group where every non-trivial element has the
          * order determined by the input PRing. We stress that this is not
@@ -5644,8 +5783,6 @@ var verificatum;
             }
         }
         algebra.PGroup = PGroup;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Abstract group representing an element of {@link PGroup}.
          *
@@ -5683,15 +5820,13 @@ var verificatum;
             }
         }
         algebra.PGroupElement = PGroupElement;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         // This code becomes more complex using map, some, etc without any
         // gain in speed.
         // Generates the product ring of the product group formed of the list
         // of groups.
         // For some reason this overloading fails.
-        // function genPRing(pGroups: PGroup[]) : PRing;
-        // function genPRing(groupAndWidth: [PGroup, size_t]) : PRing;
+        // function genPRing(pGroups: PGroup[]): PRing;
+        // function genPRing(groupAndWidth: [PGroup, size_t]): PRing;
         function genPRing(representation) {
             if (representation.length === 2 &&
                 typeof representation[1] == "number") {
@@ -5912,6 +6047,21 @@ var verificatum;
                 return new ByteTree([bbt, bts]);
             }
             /**
+             * Returns a product group or the input group if the
+             * given width equals one.
+             *
+             * @param pGroup - Basic group.
+             * @param keyWidth - Width of product group.
+             * @returns Input group or product group.
+             */
+            static getWideGroup(pGroup, keyWidth) {
+                if (keyWidth > 1) {
+                    return new PPGroup([pGroup, keyWidth]);
+                } else {
+                    return pGroup;
+                }
+            }
+            /**
              * Recovers a PPGroup instance from its representation
              * as a byte tree.
              *
@@ -5961,24 +6111,7 @@ var verificatum;
                 }
             }
         }
-        /**
-         * Returns a product group or the input group if the
-         * given width equals one.
-         *
-         * @param pGroup - Basic group.
-         * @param keyWidth - Width of product group.
-         * @returns Input group or product group.
-         */
-        PPGroup.getWideGroup = function(pGroup, keyWidth) {
-            if (keyWidth > 1) {
-                return new PPGroup([pGroup, keyWidth]);
-            } else {
-                return pGroup;
-            }
-        };
         algebra.PPGroup = PPGroup;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         // This code becomes more complex using map, some, etc without any
         // gain in speed.
         /**
@@ -6067,8 +6200,6 @@ var verificatum;
             }
         }
         algebra.PPGroupElement = PPGroupElement;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Multiplicative group modulo a prime.
          */
@@ -6299,8 +6430,6 @@ var verificatum;
             }
         }
         algebra.ModPGroup = ModPGroup;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Element of {@link ModPGroup}.
          */
@@ -6428,8 +6557,6 @@ var verificatum;
         algebra.ModPGroup_named.set("modp8192", ["FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA18217C32905E462E36CE3BE39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9DE2BCBF6955817183995497CEA956AE515D2261898FA051015728E5A8AAAC42DAD33170D04507A33A85521ABDF1CBA64ECFB850458DBEF0A8AEA71575D060C7DB3970F85A6E1E4C7ABF5AE8CDB0933D71E8C94E04A25619DCEE3D2261AD2EE6BF12FFA06D98A0864D87602733EC86A64521F2B18177B200CBBE117577A615D6C770988C0BAD946E208E24FA074E5AB3143DB5BFCE0FD108E4B82D120A92108011A723C12A787E6D788719A10BDBA5B2699C327186AF4E23C1A946834B6150BDA2583E9CA2AD44CE8DBBBC2DB04DE8EF92E8EFC141FBECAA6287C59474E6BC05D99B2964FA090C3A2233BA186515BE7ED1F612970CEE2D7AFB81BDD762170481CD0069127D5B05AA993B4EA988D8FDDC186FFB7DC90A6C08F4DF435C93402849236C3FAB4D27C7026C1D4DCB2602646DEC9751E763DBA37BDF8FF9406AD9E530EE5DB382F413001AEB06A53ED9027D831179727B0865A8918DA3EDBEBCF9B14ED44CE6CBACED4BB1BDB7F1447E6CC254B332051512BD7AF426FB8F401378CD2BF5983CA01C64B92ECF032EA15D1721D03F482D7CE6E74FEF6D55E702F46980C82B5A84031900B1C9E59E7C97FBEC7E8F323A97A7E36CC88BE0F1D45B7FF585AC54BD407B22B4154AACC8F6D7EBF48E1D814CC5ED20F8037E0A79715EEF29BE32806A1D58BB7C5DA76F550AA3D8A1FBFF0EB19CCB1A313D55CDA56C9EC2EF29632387FE8D76E3C0468043E8F663F4860EE12BF2D5B0B7474D6E694F91E6DBE115974A3926F12FEE5E438777CB6A932DF8CD8BEC4D073B931BA3BC832B68D9DD300741FA7BF8AFC47ED2576F6936BA424663AAB639C5AE4F5683423B4742BF1C978238F16CBE39D652DE3FDB8BEFC848AD922222E04A4037C0713EB57A81A23F0C73473FC646CEA306B4BCBC8862F8385DDFA9D4B7FA2C087E879683303ED5BDD3A062B3CF5B3A278A66D2A13F83F44F82DDF310EE074AB6A364597E899A0255DC164F31CC50846851DF9AB48195DED7EA1B1D510BD7EE74D73FAF36BC31ECFA268359046F4EB879F924009438B481C6CD7889A002ED5EE382BC9190DA6FC026E479558E4475677E9AA9E3050E2765694DFC81F56E880B96E7160C980DD98EDD3DFFFFFFFFFFFFFFFFF",
             "02"
         ]);
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Elliptic curve group over prime order fields.
          *
@@ -6727,8 +6854,6 @@ var verificatum;
             }
         }
         algebra.ECqPGroup = ECqPGroup;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Element of {@link ECqPGroup}.
          */
@@ -7035,8 +7160,6 @@ var verificatum;
             "1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa51868783bf2f966b7fcc0148f709a5d03bb5c9b8899c47aebb6fb71e91386409",
             "1"
         ]);
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Utility functions for treating groups abstractly.
          */
@@ -7164,7 +7287,6 @@ var verificatum;
             }
         }
         algebra.PGroupFactory = PGroupFactory;
-        // Copyright 2008-2022 Douglas Wikstrom
         /**
          * Homomorphism from a ring to a group.
          *
@@ -7178,7 +7300,6 @@ var verificatum;
             }
         }
         algebra.Hom = Hom;
-        // Copyright 2008-2022 Douglas Wikstrom
         /**
          * Exponentiation homomorphism from a ring to a
          * group. Note that the group is not necessarily a prime order group,
@@ -7199,8 +7320,6 @@ var verificatum;
             }
         }
         algebra.ExpHom = ExpHom;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Product of powers as a homomorphism.
          */
@@ -7268,8 +7387,6 @@ var verificatum;
         var ofClass = verificatum.base.ofClass;
         var ofSubclass = verificatum.base.ofSubclass;
         var setUint32ToByteArray = verificatum.base.setUint32ToByteArray;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Hash function.
          */
@@ -7282,8 +7399,6 @@ var verificatum;
             }
         }
         crypto.Hashfunction = Hashfunction;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         // Number of bytes in a block.
         const bs = 16 * 4;
         // Initial contents of state.
@@ -7498,8 +7613,6 @@ var verificatum;
             }
         }
         crypto.SHA256 = SHA256;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Pseudo-random generator based on SHA-256 in counter
          * mode.
@@ -7554,8 +7667,6 @@ var verificatum;
             }
         }
         crypto.SHA256PRG = SHA256PRG;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Labeled non-interactive zero-knowledge proof of knowledge in the
          * random oracle model.
@@ -7590,8 +7701,6 @@ var verificatum;
             }
         }
         crypto.ZKPoK = ZKPoK;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /* eslint-disable no-unused-vars */
         /**
          * A public-coin three-message special sound and special
@@ -7680,8 +7789,6 @@ var verificatum;
             }
         }
         crypto.SigmaProof = SigmaProof;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Parallel execution of Sigma proofs with identical
          * challenges from the same challenge space, but different instances
@@ -7818,8 +7925,6 @@ var verificatum;
             }
         }
         crypto.SigmaProofPara = SigmaProofPara;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * This allows combining proofs of multiple properties
          * about the same instance. All proofs must have the same challenge
@@ -7845,8 +7950,6 @@ var verificatum;
             }
         }
         crypto.SigmaProofAnd = SigmaProofAnd;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Sigma proof of a pre-image of a homomorphism from a
          * ring to a group using a generalized Schnorr proof. More precisely,
@@ -7941,7 +8044,6 @@ var verificatum;
             }
         }
         crypto.SchnorrProof = SchnorrProof;
-        // Copyright 2008-2022 Douglas Wikstrom
         /**
          * Adapter for {@link ZKPoKWriteIn}.
          */
@@ -7951,8 +8053,6 @@ var verificatum;
             }
         }
         crypto.ZKPoKWriteInAdapter = ZKPoKWriteInAdapter;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Zero-knowledge proof needed to implement the Naor-Yung
          * cryptosystem.
@@ -8001,8 +8101,6 @@ var verificatum;
             }
         }
         crypto.ZKPoKWriteIn = ZKPoKWriteIn;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Splits a product group element consisting of two parts into its two
          * parts.
@@ -8334,15 +8432,12 @@ var verificatum;
             }
         }
         crypto.ElGamal = ElGamal;
-        // Copyright 2008-2022 Douglas Wikstrom
         /**
          * Adapter for {@link ElGamalZKPoK} that creates {@link ZKPoK} that
          * imposes restrictions on plaintexts and ciphertexts.
          */
         class ElGamalZKPoKAdapter {}
         crypto.ElGamalZKPoKAdapter = ElGamalZKPoKAdapter;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Generalized El Gamal cryptosystem with parameterized zero-knowledge
          * proof of knowledge. This supports wider keys as explained in {@link
@@ -8488,8 +8583,6 @@ var verificatum;
             }
         }
         crypto.ElGamalZKPoK = ElGamalZKPoK;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Generalized Naor-Yung cryptosystem, i.e., a
          * generalized El Gamal with zero-knowledge proof of knowledge of the
@@ -8510,8 +8603,6 @@ var verificatum;
             }
         }
         crypto.ElGamalZKPoKWriteIn = ElGamalZKPoKWriteIn;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Utility class that simplifies using cryptosystems correctly.
          */
@@ -8525,8 +8616,6 @@ var verificatum;
             }
         }
         crypto.ElGamalZKPoKFactory = ElGamalZKPoKFactory;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Utility class for simplifying configuration and optimizing the use
          * of cryptosystems by users.
@@ -8651,8 +8740,6 @@ var verificatum;
             }
         }
         crypto.ElGamalZKPoKComp = ElGamalZKPoKComp;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Utility class that simplifies using cryptosystems correctly.
          */
@@ -8769,8 +8856,6 @@ var verificatum;
             }
         }
         crypto.ElGamalZKPoKClient = ElGamalZKPoKClient;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Simplistic simulation of server that generate a public key, outputs
          * a marshalled public key and encoding of zero knowledge proof, and
@@ -8856,11 +8941,3465 @@ var verificatum;
             }
         }
         crypto.ElGamalZKPoKServer = ElGamalZKPoKServer;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         class SignatureScheme {}
         crypto.SignatureScheme = SignatureScheme;
     })(crypto = verificatum.crypto || (verificatum.crypto = {}));
+})(verificatum || (verificatum = {}));
+(function(verificatum) {
+    let dev;
+    (function(dev) {
+        let bench;
+        (function(bench) {
+            let algebra;
+            (function(algebra) {
+                /**
+                 * Executes a benchmark of exponentiation in this group, potentially
+                 * with fixed-basis.
+                 *
+                 * @param pGroup - Group to be benchmarked.
+                 * @param minSamples - Minimal number of samples.
+                 * @param exps - Number of exponentiations to pre-compute for, or zero
+                 * if no pre-computation is done.
+                 * @param randomSource - Source of randomness.
+                 * @returns Average number of milliseconds per exponentiation.
+                 */
+                function bench_PGroup_exp_inner(pGroup, minSamples, exps, randomSource) {
+                    // Generate a random generator, since the standard one may be
+                    // chosen to be particularly fast.
+                    let g = pGroup.getg();
+                    let e = pGroup.pRing.randomElement(randomSource, 50);
+                    g = g.exp(e);
+                    // If exps === 0, then we are not doing fixed-basis, and we set
+                    // exps to one.
+                    const fixed = exps > 0;
+                    exps = Math.max(1, exps);
+                    const start = time_ms();
+                    for (let i = 0; i < minSamples; i++) {
+                        if (fixed) {
+                            g.fixed(exps);
+                        } else {
+                            for (let j = 0; j < exps; j++) {
+                                e = pGroup.pRing.randomElement(randomSource, 50);
+                                g.exp(e);
+                            }
+                        }
+                    }
+                    return (time_ms() - start) / (exps * minSamples);
+                }
+                /**
+                 * Executes a benchmark of exponentiation in all named groups and
+                 * returns a list of running times.
+                 *
+                 * @param minSamples - Minimal number of samples.
+                 * @param randomSource - Source of randomness.
+                 * @returns Average number of milliseconds per exponentiation.
+                 */
+                function bench_PGroup_exp(pGroups, minSamples, randomSource) {
+                    const results = [];
+                    for (let i = 0; i < pGroups.length; i++) {
+                        results[i] =
+                            bench_PGroup_exp_inner(pGroups[i], minSamples, 0, randomSource);
+                    }
+                    return results;
+                }
+                algebra.bench_PGroup_exp = bench_PGroup_exp;
+                /**
+                 * Executes a benchmark of fixed-basis exponentiation in this group
+                 * and returns a list of the running times.
+                 *
+                 * @param pGroup - Group to be benchmarked.
+                 * @param minSamples - Minimal number of samples.
+                 * @param exps - Lists of number of exponentiations.
+                 * @param randomSource - Source of randomness.
+                 * @returns Average number of milliseconds per exponentiation.
+                 */
+                function bench_PGroup_fixed_inner(pGroup, minSamples, exps, randomSource) {
+                    const results = [];
+                    for (let i = 0; i < exps.length; i++) {
+                        results[i] =
+                            bench_PGroup_exp_inner(pGroup, minSamples, exps[i], randomSource);
+                    }
+                    return results;
+                }
+                /**
+                 * Executes a benchmark of exponentiation in all named groups.
+                 *
+                 * @param pGroups - Benchmarked groups.
+                 * @param minSamples - Minimal number of samples.
+                 * @param exps - Lists of number of exponentiations.
+                 * @param randomSource - Source of randomness.
+                 * @returns Average number of milliseconds per exponentiation.
+                 */
+                function bench_PGroup_fixed(pGroups, minSamples, exps, randomSource) {
+                    const results = [];
+                    for (let i = 0; i < pGroups.length; i++) {
+                        results[i] = bench_PGroup_fixed_inner(pGroups[i], minSamples, exps, randomSource);
+                    }
+                    return results;
+                }
+                algebra.bench_PGroup_fixed = bench_PGroup_fixed;
+            })(algebra = bench.algebra || (bench.algebra = {}));
+            let crypto;
+            (function(crypto) {
+                var ElGamal = verificatum.crypto.ElGamal;
+                var ElGamalZKPoKWriteIn = verificatum.crypto.ElGamalZKPoKWriteIn;
+                /**
+                 * Estimates the running time of encryption in milliseconds.
+                 *
+                 * @param standard - Indicates if the standard or variant scheme is
+                 * used.
+                 * @param pGroup - Group over which the cryptosystem is defined.
+                 * @param width - Width of plaintexts.
+                 * @param minSamples - Minimum number of executions performed.
+                 * @param randomSource - Source of randomness.
+                 * @param statDist - Statistical distance from the uniform
+                 * distribution assuming that the output of the instance of the random
+                 * source is perfect.
+                 * @returns Estimated running time of encryption in milliseconds.
+                 */
+                function bench_ElGamal_PGroup_width(standard, pGroup, width, minSamples, randomSource, statDist) {
+                    const eg = new ElGamal(standard, pGroup, randomSource, statDist);
+                    const keys = eg.gen();
+                    const wpk = eg.widePublicKey(keys[0], width);
+                    const m = wpk.pGroup.project(1).getg();
+                    const start = time_ms();
+                    let j = 0;
+                    while (j < minSamples) {
+                        eg.encrypt(wpk, m);
+                        j++;
+                    }
+                    return (time_ms() - start) / j;
+                }
+                crypto.bench_ElGamal_PGroup_width = bench_ElGamal_PGroup_width;
+                /**
+                 * Estimates the running time of encryption in milliseconds for
+                 * various widths.
+                 *
+                 * @param standard - Indicates if the standard or variant scheme is
+                 * used.
+                 * @param pGroup - Group over which the cryptosystem is defined.
+                 * @param maxWidth - Maximal width of plaintexts.
+                 * @param minSamples - Minimum number of executions performed.
+                 * @param randomSource - Source of randomness.
+                 * @param statDist - Statistical distance from the uniform
+                 * distribution assuming that the output of the instance of the random
+                 * source is perfect.
+                 * @returns Array of estimated running times of encryption in
+                 * milliseconds.
+                 */
+                function bench_ElGamal_PGroup(standard, pGroup, maxWidth, minSamples, randomSource, statDist) {
+                    const results = [];
+                    for (let i = 1; i <= maxWidth; i++) {
+                        const t = bench_ElGamal_PGroup_width(standard, pGroup, i, minSamples, randomSource, statDist);
+                        results.push(t);
+                    }
+                    return results;
+                }
+                crypto.bench_ElGamal_PGroup = bench_ElGamal_PGroup;
+                /**
+                 * Estimates the running time of encryption in milliseconds for
+                 * various groups and widths.
+                 *
+                 * @param standard - Indicates if the standard or variant scheme is
+                 * used.
+                 * @param pGroups - Groups over which the cryptosystem is defined.
+                 * @param maxWidth - Maximal width of plaintexts.
+                 * @param minSamples - Minimum number of executions performed.
+                 * @param randomSource - Source of randomness.
+                 * @param statDist - Statistical distance from the uniform
+                 * distribution assuming that the output of the instance of the random
+                 * source is perfect.
+                 * @returns Array or arrays of estimated running time of encryption in
+                 * milliseconds.
+                 */
+                function bench_ElGamal(standard, pGroups, maxWidth, minSamples, randomSource, statDist) {
+                    const results = [];
+                    for (let i = 0; i < pGroups.length; i++) {
+                        results[i] = bench_ElGamal_PGroup(standard, pGroups[i], maxWidth, minSamples, randomSource, statDist);
+                    }
+                    return results;
+                }
+                crypto.bench_ElGamal = bench_ElGamal;
+                /**
+                 * Estimates the running time of encryption in milliseconds.
+                 *
+                 * @param standard - Indicates if the standard or variant scheme is
+                 * used.
+                 * @param pGroup - Group over which the cryptosystem is defined.
+                 * @param hashfunction - Hash function used for Fiat-Shamir heuristic.
+                 * @param width - Width of plaintexts.
+                 * @param minSamples - Minimum number of executions performed.
+                 * @param randomSource - Source of randomness.
+                 * @param statDist - Statistical distance from the uniform
+                 * distribution assuming that the output of the instance of the random
+                 * source is perfect.
+                 * @returns Estimated running time of encryption in milliseconds.
+                 */
+                function bench_ElGamalZKPoKWriteIn_PGroup_width(standard, pGroup, hashfunction, width, minSamples, randomSource, statDist) {
+                    const eg = new ElGamalZKPoKWriteIn(standard, pGroup, hashfunction, randomSource, statDist);
+                    const keys = eg.gen();
+                    const wpk = eg.widePublicKey(keys[0], width);
+                    const m = wpk.pGroup.project(1).getg();
+                    const label = randomSource.getBytes(10);
+                    const start = time_ms();
+                    let j = 0;
+                    while (j < minSamples) {
+                        eg.encrypt(label, wpk, m);
+                        j++;
+                    }
+                    return (time_ms() - start) / j;
+                }
+                crypto.bench_ElGamalZKPoKWriteIn_PGroup_width = bench_ElGamalZKPoKWriteIn_PGroup_width;
+                /**
+                 * Estimates the running time of encryption in milliseconds for
+                 * various widths.
+                 *
+                 * @param standard - Indicates if the standard or variant scheme is
+                 * used.
+                 * @param pGroup - Group over which the cryptosystem is defined.
+                 * @param hashfunction - Hash function used for Fiat-Shamir heuristic.
+                 * @param maxWidth - Maximal width of plaintexts.
+                 * @param minSamples - Minimum number of executions performed.
+                 * @param randomSource - Source of randomness.
+                 * @param statDist - Statistical distance from the uniform
+                 * distribution assuming that the output of the instance of the random
+                 * source is perfect.
+                 * @returns Array of estimated running times of encryption in
+                 * milliseconds.
+                 */
+                function bench_ElGamalZKPoKWriteIn_PGroup(standard, pGroup, hashfunction, maxWidth, minSamples, randomSource, statDist) {
+                    const results = [];
+                    for (let i = 1; i <= maxWidth; i++) {
+                        const t = bench_ElGamalZKPoKWriteIn_PGroup_width(standard, pGroup, hashfunction, i, minSamples, randomSource, statDist);
+                        results.push(t);
+                    }
+                    return results;
+                }
+                crypto.bench_ElGamalZKPoKWriteIn_PGroup = bench_ElGamalZKPoKWriteIn_PGroup;
+                /**
+                 * Estimates the running time of encryption in milliseconds for
+                 * various groups and widths.
+                 *
+                 * @param standard - Indicates if the standard or variant scheme is
+                 * used.
+                 * @param pGroups - Groups over which the cryptosystem is defined.
+                 * @param hashfunction - Hash function used for Fiat-Shamir heuristic.
+                 * @param maxWidth - Maximal width of plaintexts.
+                 * @param minSamples - Minimum number of executions performed.
+                 * @param randomSource - Source of randomness.
+                 * @param statDist - Statistical distance from the uniform
+                 * distribution assuming that the output of the instance of the random
+                 * source is perfect.
+                 * @returns Array or arrays of estimated running time of encryption in
+                 * milliseconds.
+                 */
+                function bench_ElGamalZKPoKWriteIn(standard, pGroups, hashfunction, maxWidth, minSamples, randomSource, statDist) {
+                    const results = [];
+                    for (let i = 0; i < pGroups.length; i++) {
+                        results[i] = bench_ElGamalZKPoKWriteIn_PGroup(standard, pGroups[i], hashfunction, maxWidth, minSamples, randomSource, statDist);
+                    }
+                    return results;
+                }
+                crypto.bench_ElGamalZKPoKWriteIn = bench_ElGamalZKPoKWriteIn;
+            })(crypto = bench.crypto || (bench.crypto = {}));
+            var ECqPGroup = verificatum.algebra.ECqPGroup;
+            var ModPGroup = verificatum.algebra.ModPGroup;
+            var PGroupFactory = verificatum.algebra.PGroupFactory;
+            var SHA256 = verificatum.crypto.SHA256;
+            var SHA256PRG = verificatum.crypto.SHA256PRG;
+            var asciiToByteArray = verificatum.base.asciiToByteArray;
+            var bench_ElGamal = verificatum.dev.bench.crypto.bench_ElGamal;
+            var bench_ElGamalZKPoKWriteIn = verificatum.dev.bench.crypto.bench_ElGamalZKPoKWriteIn;
+            var bench_PGroup_exp = verificatum.dev.bench.algebra.bench_PGroup_exp;
+            var bench_PGroup_fixed = verificatum.dev.bench.algebra.bench_PGroup_fixed;
+            /**
+             * Provides formatting functions for benchmarks.
+             * TSDOC_MODULE
+             */
+            /**
+             * Returns a string representation of the today's date.
+             * @returns Today's date.
+             */
+            function today() {
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = today.getMonth() + 1;
+                const dd = today.getDate();
+                // let: mms;
+                // if (mm < 10) {
+                //     mms = "0" + mm;
+                // }
+                // if (dd < 10) {
+                //     dd = "0" + dd;
+                // }
+                return `${yyyy}-${mm}-${dd}`;
+            }
+            bench.today = today;
+            /**
+             * Returns a list of indices.
+             *
+             * @param maxWidth - Maximum index.
+             * @returns List of indices.
+             */
+            function getIndices(maxWidth) {
+                const indices = [];
+                for (let i = 0; i < maxWidth; i++) {
+                    indices[i] = i + 1;
+                }
+                return indices;
+            }
+            bench.getIndices = getIndices;
+            const txtPad = 16;
+            const numPad = 8;
+            /**
+             * Formats a list of benchmark results as a text table.
+             *
+             * @param pGroupNames - List of group names.
+             * @param results - List of running times.
+             * @returns Text output.
+             */
+            function grpTableTXT(pGroupNames, results) {
+                let s = "Group".padEnd(txtPad, " ") + "ms / exp\n";
+                for (let i = 0; i < results.length; i++) {
+                    s += pGroupNames[i].padEnd(txtPad, " ");
+                    s += results[i].toFixed(1).toString().padStart(numPad) + "\n";
+                }
+                return s;
+            }
+            bench.grpTableTXT = grpTableTXT;
+            /**
+             * Formats a list of benchmark results as a HTML table.
+             *
+             * @param pGroupNames - List of group names.
+             * @param results - List of running times.
+             * @returns HTML code for output.
+             */
+            function grpTableHTML(pGroupNames, results) {
+                let s = "<table>\n";
+                s += "<tr>" +
+                    "<th>Group</th>" +
+                    "<th>ms / exp</th>" +
+                    "</tr>\n";
+                for (let i = 0; i < results.length; i++) {
+                    s += "<tr>";
+                    s += "<td>" + pGroupNames[i] + "</td>";
+                    s += "<td style=\"text-align:right\">";
+                    s += results[i].toFixed(1);
+                    s += "</td>";
+                    s += "</tr>\n";
+                }
+                s += "</table>";
+                return s;
+            }
+            bench.grpTableHTML = grpTableHTML;
+            /**
+             * Returns HTML code for a header row.
+             *
+             * @param header - Header string.
+             * @returns Header row.
+             */
+            function grpIntHeaderHTML(header, indices) {
+                let s = "<tr>\n<th>Group \\ " + header + "</th>\n";
+                for (let i = 0; i < indices.length; i++) {
+                    s += "<th>" + indices[i] + "</th>\n";
+                }
+                s += "</tr><h>\n";
+                return s;
+            }
+            bench.grpIntHeaderHTML = grpIntHeaderHTML;
+            /**
+             * Returns HTML code for a row of results.
+             *
+             * @param pGroupName - Name of a group.
+             * @param rowResults - Row of results.
+             * @returns Result row.
+             */
+            function grpIntRowHTML(pGroupName, rowResults) {
+                let s = "<tr>\n<td>" + pGroupName + "</td>\n";
+                for (let i = 0; i < rowResults.length; i++) {
+                    s += "<td style=\"text-align:right\">";
+                    s += rowResults[i].toFixed(1);
+                    s += "</td>\n";
+                }
+                s += "</tr>\n";
+                return s;
+            }
+            bench.grpIntRowHTML = grpIntRowHTML;
+            /**
+             * Returns HTML code for table of results.
+             *
+             * @param header - Name of a group.
+             * @param indices - Indices
+             * @param pGroupNames - List of group names.
+             * @param results - Table of running times.
+             * @returns HTML code for the given results.
+             */
+            function grpIntTableHTML(header, indices, pGroupNames, results) {
+                let s = "<table>\n";
+                s += grpIntHeaderHTML(header, indices);
+                for (let i = 0; i < results.length; i++) {
+                    s += grpIntRowHTML(pGroupNames[i], results[i]);
+                }
+                s += "</table>";
+                return s;
+            }
+            bench.grpIntTableHTML = grpIntTableHTML;
+            /**
+             * Returns text for a header row.
+             *
+             * @param header - Header string.
+             * @returns Header row.
+             */
+            function grpIntHeaderTXT(header, indices) {
+                let s = ("Group \\ " + header).padEnd(txtPad, " ");
+                for (let i = 0; i < indices.length; i++) {
+                    s += indices[i].toString().padStart(numPad, " ");
+                }
+                s += "\n";
+                return s;
+            }
+            bench.grpIntHeaderTXT = grpIntHeaderTXT;
+            /**
+             * Returns text for a row of results.
+             *
+             * @param pGroupName - Name of a group.
+             * @param rowResults - Row of results.
+             * @returns Result row.
+             */
+            function grpIntRowTXT(pGroupName, rowResults) {
+                let s = pGroupName.padEnd(txtPad, " ");
+                for (let i = 0; i < rowResults.length; i++) {
+                    s += rowResults[i].toFixed(1).toString().padStart(numPad, " ");
+                }
+                s += "\n";
+                return s;
+            }
+            bench.grpIntRowTXT = grpIntRowTXT;
+            /**
+             * Returns  text for table of results.
+             *
+             * @param header - Name of a group.
+             * @param indices - Indices
+             * @param pGroupNames - List of group names.
+             * @param results - Table of running times.
+             * @returns Text for the given results.
+             */
+            function grpIntTableTXT(header, indices, pGroupNames, results) {
+                let s = grpIntHeaderTXT(header, indices);
+                for (let i = 0; i < results.length; i++) {
+                    s += grpIntRowTXT(pGroupNames[i], results[i]);
+                }
+                return s;
+            }
+            bench.grpIntTableTXT = grpIntTableTXT;
+            /**
+             * Test suite for library.
+             */
+            class Suite {
+                /**
+                 * Constructs a test suite.
+                 *
+                 * @param statDist - Statistical distance.
+                 * @param maxWidth - Maximal width of ciphertexts.
+                 * @param seed - Seed for pseudo random generator.
+                 */
+                constructor(statDist, maxWidth, seed, outputFormat) {
+                    this.statDist = statDist;
+                    this.maxWidth = maxWidth;
+                    this.hashfunction = new SHA256();
+                    this.randomSource = new SHA256PRG();
+                    const seedBytes = asciiToByteArray(seed);
+                    this.randomSource.setSeed(seedBytes);
+                    if (outputFormat == "txt") {
+                        this.grpTable = grpTableTXT;
+                        this.grpIntTable = grpIntTableTXT;
+                    } else {
+                        this.grpTable = grpTableHTML;
+                        this.grpIntTable = grpIntTableHTML;
+                    }
+                }
+                benchmarks() {
+                    return [
+                        "ModPGroup.exp",
+                        "ECqPGroup.exp",
+                        "FixModPow.exp",
+                        "ElGamal",
+                        "ElGamalZKPoKWriteIn",
+                        "NaorYung"
+                    ];
+                }
+                /**
+                 *
+                 *
+                 * @param exponent - Exponent.
+                 * @returns Array of exponents.
+                 */
+                bench(command, minSamples) {
+                    const cryptoPGroupNames = [
+                        "modp3072",
+                        "modp4096",
+                        "modp6144",
+                        "P-256",
+                        "secp384r1",
+                        "P-521"
+                    ];
+                    if (command == "ECqPGroup.exp") {
+                        const pGroupNames = ECqPGroup.getPGroupNames();
+                        const pGroups = ECqPGroup.getPGroups();
+                        const results = bench_PGroup_exp(pGroups, minSamples, this.randomSource);
+                        return [command,
+                            this.grpTable(pGroupNames, results)
+                        ];
+                    } else if (command == "ModPGroup.exp") {
+                        const pGroupNames = ModPGroup.getPGroupNames();
+                        const pGroups = ModPGroup.getPGroups();
+                        const results = bench_PGroup_exp(pGroups, minSamples, this.randomSource);
+                        return [command,
+                            this.grpTable(pGroupNames, results)
+                        ];
+                    } else if (command == "FixModPow.exp") {
+                        const pGroupNames = ["modp3072",
+                            "modp4096",
+                            "modp6144"
+                        ];
+                        const exps = [0, 1, 2, 4, 8, 16, 32];
+                        const pGroups = PGroupFactory.getPGroups(pGroupNames);
+                        const results = bench_PGroup_fixed(pGroups, minSamples, exps, this.randomSource);
+                        return [command,
+                            this.grpIntTable("Exps", exps, pGroupNames, results)
+                        ];
+                    } else if (command == "ElGamal") {
+                        const indices = getIndices(this.maxWidth);
+                        const pGroups = PGroupFactory.getPGroups(cryptoPGroupNames);
+                        const results = bench_ElGamal(true, pGroups, this.maxWidth, minSamples, this.randomSource, this.statDist);
+                        return [command, this.grpIntTable("Width", indices, cryptoPGroupNames, results)];
+                    } else if (command == "ElGamalZKPoKWriteIn") {
+                        const indices = getIndices(this.maxWidth);
+                        const pGroups = PGroupFactory.getPGroups(cryptoPGroupNames);
+                        const results = bench_ElGamalZKPoKWriteIn(true, pGroups, this.hashfunction, this.maxWidth, minSamples, this.randomSource, this.statDist);
+                        return [command, this.grpIntTable("Width", indices, cryptoPGroupNames, results)];
+                    } else if (command == "NaorYung") {
+                        const indices = getIndices(this.maxWidth);
+                        const pGroups = PGroupFactory.getPGroups(cryptoPGroupNames);
+                        const results = bench_ElGamalZKPoKWriteIn(false, pGroups, this.hashfunction, this.maxWidth, minSamples, this.randomSource, this.statDist);
+                        return [command, this.grpIntTable("Width", indices, cryptoPGroupNames, results)];
+                    } else {
+                        throw Error("Unknown command! (" + command + ")");
+                    }
+                }
+            }
+            bench.Suite = Suite;
+        })(bench = dev.bench || (dev.bench = {}));
+        let test;
+        (function(test) {
+            let arithm;
+            (function(arithm) {
+                var FixModPow = verificatum.arithm.FixModPow;
+                var LI = verificatum.arithm.LI;
+                var ModPowAlg = verificatum.arithm.ModPowAlg;
+                var ModPowProd = verificatum.arithm.ModPowProd;
+                var WORDSIZE = verificatum.arithm.uli.WORDSIZE;
+                var add = verificatum.arithm.uli.add;
+                var cmp = verificatum.arithm.uli.cmp;
+                var div3by2 = verificatum.arithm.uli.div3by2;
+                var div_qr = verificatum.arithm.uli.div_qr;
+                var hex = verificatum.arithm.uli.hex;
+                var iszero = verificatum.arithm.uli.iszero;
+                var msword = verificatum.arithm.uli.msword;
+                var mul = verificatum.arithm.uli.mul;
+                var mul_mont = verificatum.arithm.li.mul_mont;
+                var neg = verificatum.arithm.uli.neg;
+                var neginvm_mont = verificatum.arithm.li.neginvm_mont;
+                var newarray = verificatum.arithm.uli.newarray;
+                var normalize = verificatum.arithm.uli.normalize;
+                var reciprocal_word = verificatum.arithm.uli.reciprocal_word;
+                var reciprocal_word_3by2 = verificatum.arithm.uli.reciprocal_word_3by2;
+                var set = verificatum.arithm.uli.set;
+                var sub = verificatum.arithm.uli.sub;
+                // Small primes useful for testing.
+                arithm.small_primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997, 1009, 1013, 1019, 1021, 1031, 1033, 1039, 1049, 1051, 1061, 1063, 1069, 1087, 1091, 1093, 1097, 1103, 1109, 1117, 1123, 1129, 1151, 1153, 1163, 1171, 1181, 1187, 1193, 1201, 1213, 1217, 1223, 1229, 1231, 1237, 1249, 1259, 1277, 1279, 1283, 1289, 1291, 1297, 1301, 1303, 1307, 1319, 1321, 1327, 1361, 1367, 1373, 1381, 1399, 1409, 1423, 1427, 1429, 1433, 1439, 1447, 1451, 1453, 1459, 1471, 1481, 1483, 1487, 1489, 1493, 1499, 1511, 1523, 1531, 1543, 1549, 1553, 1559, 1567, 1571, 1579, 1583, 1597, 1601, 1607, 1609, 1613, 1619, 1621, 1627, 1637, 1657, 1663, 1667, 1669, 1693, 1697, 1699, 1709, 1721, 1723, 1733, 1741, 1747, 1753, 1759, 1777, 1783, 1787, 1789, 1801, 1811, 1823, 1831, 1847, 1861, 1867, 1871, 1873, 1877, 1879, 1889, 1901, 1907, 1913, 1931, 1933, 1949, 1951, 1973, 1979, 1987, 1993, 1997, 1999, 2003, 2011, 2017, 2027, 2029, 2039, 2053, 2063, 2069, 2081, 2083, 2087, 2089, 2099, 2111, 2113, 2129, 2131, 2137, 2141, 2143, 2153, 2161, 2179, 2203, 2207, 2213, 2221, 2237, 2239, 2243, 2251, 2267, 2269, 2273, 2281, 2287, 2293, 2297, 2309, 2311, 2333, 2339, 2341, 2347, 2351, 2357, 2371, 2377, 2381, 2383, 2389, 2393, 2399, 2411, 2417, 2423, 2437, 2441, 2447, 2459, 2467, 2473, 2477, 2503, 2521, 2531, 2539, 2543, 2549, 2551, 2557, 2579, 2591, 2593, 2609, 2617, 2621, 2633, 2647, 2657, 2659, 2663, 2671, 2677, 2683, 2687, 2689, 2693, 2699, 2707, 2711, 2713, 2719, 2729, 2731, 2741, 2749, 2753, 2767, 2777, 2789, 2791, 2797, 2801, 2803, 2819, 2833, 2837, 2843, 2851, 2857, 2861, 2879, 2887, 2897, 2903, 2909, 2917, 2927, 2939, 2953, 2957, 2963, 2969, 2971, 2999, 3001, 3011, 3019, 3023, 3037, 3041, 3049, 3061, 3067, 3079, 3083, 3089, 3109, 3119, 3121, 3137, 3163, 3167, 3169, 3181, 3187, 3191, 3203, 3209, 3217, 3221, 3229, 3251, 3253, 3257, 3259, 3271, 3299, 3301, 3307, 3313, 3319, 3323, 3329, 3331, 3343, 3347, 3359, 3361, 3371, 3373, 3389, 3391, 3407, 3413, 3433, 3449, 3457, 3461, 3463, 3467, 3469, 3491, 3499, 3511, 3517, 3527, 3529, 3533, 3539, 3541, 3547, 3557, 3559, 3571, 3581, 3583, 3593, 3607, 3613, 3617, 3623, 3631, 3637, 3643, 3659, 3671, 3673, 3677, 3691, 3697, 3701, 3709, 3719, 3727, 3733, 3739, 3761, 3767, 3769, 3779, 3793, 3797, 3803, 3821, 3823, 3833, 3847, 3851, 3853, 3863, 3877, 3881, 3889, 3907, 3911, 3917, 3919, 3923, 3929, 3931, 3943, 3947, 3967, 3989, 4001, 4003, 4007, 4013, 4019, 4021, 4027, 4049, 4051, 4057, 4073, 4079, 4091, 4093, 4099, 4111, 4127, 4129, 4133, 4139, 4153, 4157, 4159, 4177, 4201, 4211, 4217, 4219, 4229, 4231, 4241, 4243, 4253, 4259, 4261, 4271, 4273, 4283, 4289, 4297, 4327, 4337, 4339, 4349, 4357, 4363, 4373, 4391, 4397, 4409, 4421, 4423, 4441, 4447, 4451, 4457, 4463, 4481, 4483, 4493, 4507, 4513, 4517, 4519, 4523, 4547, 4549, 4561, 4567, 4583, 4591, 4597, 4603, 4621, 4637, 4639, 4643, 4649, 4651, 4657, 4663, 4673, 4679, 4691, 4703, 4721, 4723, 4729, 4733, 4751, 4759, 4783, 4787, 4789, 4793, 4799, 4801, 4813, 4817, 4831, 4861, 4871, 4877, 4889, 4903, 4909, 4919, 4931, 4933, 4937, 4943, 4951, 4957, 4967, 4969, 4973, 4987, 4993, 4999, 5003, 5009, 5011, 5021, 5023, 5039, 5051, 5059, 5077, 5081, 5087, 5099, 5101, 5107, 5113, 5119, 5147, 5153, 5167, 5171, 5179, 5189, 5197, 5209, 5227, 5231, 5233, 5237, 5261, 5273, 5279, 5281, 5297, 5303, 5309, 5323, 5333, 5347, 5351, 5381, 5387, 5393, 5399, 5407, 5413, 5417, 5419, 5431, 5437, 5441, 5443, 5449, 5471, 5477, 5479, 5483, 5501, 5503, 5507, 5519, 5521, 5527, 5531, 5557, 5563, 5569, 5573, 5581, 5591, 5623, 5639, 5641, 5647, 5651, 5653, 5657, 5659, 5669, 5683, 5689, 5693, 5701, 5711, 5717, 5737, 5741, 5743, 5749, 5779, 5783, 5791, 5801, 5807, 5813, 5821, 5827, 5839, 5843, 5849, 5851, 5857, 5861, 5867, 5869, 5879, 5881, 5897, 5903, 5923, 5927, 5939, 5953, 5981, 5987, 6007, 6011, 6029, 6037, 6043, 6047, 6053, 6067, 6073, 6079, 6089, 6091, 6101, 6113, 6121, 6131, 6133, 6143, 6151, 6163, 6173, 6197, 6199, 6203, 6211, 6217, 6221, 6229, 6247, 6257, 6263, 6269, 6271, 6277, 6287, 6299, 6301, 6311, 6317, 6323, 6329, 6337, 6343, 6353, 6359, 6361, 6367, 6373, 6379, 6389, 6397, 6421, 6427, 6449, 6451, 6469, 6473, 6481, 6491, 6521, 6529, 6547, 6551, 6553, 6563, 6569, 6571, 6577, 6581, 6599, 6607, 6619, 6637, 6653, 6659, 6661, 6673, 6679, 6689, 6691, 6701, 6703, 6709, 6719, 6733, 6737, 6761, 6763, 6779, 6781, 6791, 6793, 6803, 6823, 6827, 6829, 6833, 6841, 6857, 6863, 6869, 6871, 6883, 6899, 6907, 6911, 6917, 6947, 6949, 6959, 6961, 6967, 6971, 6977, 6983, 6991, 6997, 7001, 7013, 7019, 7027, 7039, 7043, 7057, 7069, 7079, 7103, 7109, 7121, 7127, 7129, 7151, 7159, 7177, 7187, 7193, 7207, 7211, 7213, 7219, 7229, 7237, 7243, 7247, 7253, 7283, 7297, 7307, 7309, 7321, 7331, 7333, 7349, 7351, 7369, 7393, 7411, 7417, 7433, 7451, 7457, 7459, 7477, 7481, 7487, 7489, 7499, 7507, 7517, 7523, 7529, 7537, 7541, 7547, 7549, 7559, 7561, 7573, 7577, 7583, 7589, 7591, 7603, 7607, 7621, 7639, 7643, 7649, 7669, 7673, 7681, 7687, 7691, 7699, 7703, 7717, 7723, 7727, 7741, 7753, 7757, 7759, 7789, 7793, 7817, 7823, 7829, 7841, 7853, 7867, 7873, 7877, 7879, 7883, 7901, 7907, 7919];
+                // Large safe primes useful for testing.
+                arithm.safe_primes = [
+                    "01970e2e8a60c345b31d85debed9053ad61e15a0a87fca07114bcc330fdfa7c49f",
+                    "02f62ad5c74210285fb6ec7a06d664d88e1ef3ed9066b9857121c3b4ee8c7c1987",
+                    "0768e94e55eba37f8243003c231a205482b46db046f17e4ad7c064bf6f8811903b",
+                    "0d4395e7da60f2bb28709184870547cbbc948fb1e67a3923f44cc1d297170e9787"
+                ];
+                const liprefix = "verificatum.arithm.uli";
+                const MASK_ALL = (1 << WORDSIZE) - 1;
+                const MASK_ALL_2 = [MASK_ALL, MASK_ALL, 0];
+                const MASK_ALL_3 = [MASK_ALL, MASK_ALL, MASK_ALL];
+
+                function INSECURErandom_uli_t(bitLength) {
+                    const noWords = Math.floor((bitLength + 28 - 1) / 28);
+                    const zeroBits = noWords * 28 - bitLength;
+                    const x = [];
+                    for (let i = 0; i < noWords; i++) {
+                        x[i] = Math.floor(Math.random() * 0x10000000);
+                        x[i] &= 0xfffffff;
+                    }
+                    x[x.length - 1] &= 0xfffffff >>> zeroBits;
+                    normalize(x);
+                    return x;
+                }
+
+                function test_twos_negation(tc) {
+                    const endTime = tc.start([liprefix + " (negation in two's complement)"], tc.testTime);
+                    // This is exhaustive.
+                    let i = 1;
+                    const s = 100;
+                    while (!tc.done(endTime)) {
+                        const x = INSECURErandom_uli_t(i);
+                        const y = [];
+                        y.length = x.length + 1;
+                        const z = [];
+                        z.length = x.length + 1;
+                        neg(y, x);
+                        add(z, x, y);
+                        if (!iszero(z)) {
+                            tc.error("Negation failed!" +
+                                "\nx = 0x" + hex(x) +
+                                "\ny = 0x" + hex(y) +
+                                "\nz = 0x" + hex(z));
+                        }
+                        if (i == s) {
+                            i = 1;
+                        }
+                    }
+                    tc.end();
+                }
+                arithm.test_twos_negation = test_twos_negation;
+
+                function test_neginvm_mont(tc) {
+                    let ex = "";
+                    if (WORDSIZE < 22) {
+                        ex = " - exhaustive";
+                    }
+                    tc.start([liprefix + ` (neginvm_mont${ex})`], tc.testTime);
+                    // tpw = 2^28
+                    const tpw = [0x0, 0x1];
+                    const nw = [0, 0];
+                    const m = [0];
+                    const w = [0];
+                    const p = newarray(m.length + tpw.length + 2);
+                    const q = newarray(Math.max(0, m.length - tpw.length) + 1);
+                    // This is exhaustive when WORDSIZE < 2^20. Compile with
+                    // WORDSIZE=20 to run it this way.
+                    const max_m0 = 1 << Math.min(20, WORDSIZE);
+                    for (let m0 = 1; m0 < max_m0; m0 += 2) {
+                        // m = m0 mod 2^28
+                        m[0] = m0;
+                        // w = -m^(-1) mod m
+                        const w0 = neginvm_mont(m);
+                        w[0] = w0;
+                        // nw = m^(-1) mod 2^28
+                        sub(nw, tpw, w);
+                        // p = m * m^(-1)
+                        mul(p, m, nw);
+                        // p = p mod 2^28
+                        div_qr(q, p, tpw);
+                        // -m^(-1) * m = 1 mod 2^28
+                        if (cmp(p, [1]) != 0) {
+                            tc.error("Incorrect Montgomery inverse!" +
+                                "\nb = 0x" + hex(tpw) +
+                                "\nm = 0x" + hex(m) +
+                                "\nw = 0x" + hex(w));
+                        }
+                    }
+                    tc.end();
+                }
+                arithm.test_neginvm_mont = test_neginvm_mont;
+
+                function test_reciprocal_word(tc) {
+                    tc.start([liprefix + " (reciprocal_word - exhaustive)"], tc.testTime);
+                    const d = [0];
+                    const v = [0, 0];
+                    const p = [0, 0, 0];
+                    const r = [0, 0, 0];
+                    // This is exhaustive.
+                    let i = 0;
+                    while (i < (1 << (WORDSIZE - 1))) {
+                        d[0] = i;
+                        d[0] |= (1 << (WORDSIZE - 1));
+                        // 2by1 reciprocal of d.
+                        v[0] = reciprocal_word(d[0]);
+                        // Add 2**WORDSIZE.
+                        v[1] = 1;
+                        // Check that the reciprocal is in the right interval by
+                        // using it.
+                        // p = (v + 2^WORDSIZE) * d
+                        mul(p, v, d);
+                        // 2^(2 * WORDSIZE) - 1 - p
+                        sub(r, MASK_ALL_2, p);
+                        if (cmp(r, d) >= 0) {
+                            tc.error("Too small reciprocal!" +
+                                "\nd = 0x" + hex(d) +
+                                "\nr = 0x" + hex(r) +
+                                "\nv = " + v[0]);
+                        }
+                        i++;
+                    }
+                    tc.end();
+                }
+                arithm.test_reciprocal_word = test_reciprocal_word;
+
+                function test_reciprocal_word_3by2(tc) {
+                    const endTime = tc.start([liprefix + " (reciprocal_word_3by2)"], tc.testTime);
+                    const v = [0, 0];
+                    const p = [0, 0, 0, 0];
+                    const r = [0, 0, 0, 0];
+                    while (!tc.done(endTime)) {
+                        // Divisor with leading bit set.
+                        const d = INSECURErandom_uli_t(2 * WORDSIZE);
+                        d[1] |= (1 << (WORDSIZE - 1));
+                        // 3by2 reciprocal of d.
+                        v[0] = reciprocal_word_3by2(d);
+                        // Add 2**(2 * WORDSIZE).
+                        v[1] = 1;
+                        // Check that the reciprocal is in the right interval by
+                        // using it.
+                        // p = (v + 2^(2 * WORDSIZE)) * d
+                        mul(p, v, d);
+                        // 2^(3 * WORDSIZE) - 1 - p
+                        sub(r, MASK_ALL_3, p);
+                        if (cmp(r, d) >= 0) {
+                            tc.error("Too small reciprocal!" +
+                                "\nd = 0x" + hex(d) +
+                                "\nr = 0x" + hex(r) +
+                                "\nv = " + v[0]);
+                        }
+                    }
+                    tc.end();
+                }
+                arithm.test_reciprocal_word_3by2 = test_reciprocal_word_3by2;
+
+                function test_div3by2(tc) {
+                    const endTime = tc.start([liprefix + " (div3by2)"], tc.testTime);
+                    let d;
+                    let u;
+                    let v;
+                    let q;
+                    const p = [0, 0, 0, 0];
+                    const r = [0, 0];
+                    // Negative of d in two's complement.
+                    const neg_d = [0, 0];
+                    while (!tc.done(endTime)) {
+                        do {
+                            // Divisor with leading bit set.
+                            d = INSECURErandom_uli_t(2 * WORDSIZE);
+                            d[1] |= (1 << (WORDSIZE - 1));
+                            // Dividend such that u < 2^WORDSIZE * d
+                            u = INSECURErandom_uli_t(3 * WORDSIZE);
+                        } while (u[2] >= d[1] ||
+                            (u[2] == d[1] && u[1] >= d[0]));
+                        sub(neg_d, [0, 0], d);
+                        // Reciprocal.
+                        v = reciprocal_word_3by2(d);
+                        q = div3by2(r, u, d, neg_d, v);
+                        if (cmp(r, d) >= 0) {
+                            tc.error("Too small reciprocal!" +
+                                "\nu = 0x" + hex(u) +
+                                "\nd = 0x" + hex(d) +
+                                "\nq = " + q +
+                                "\nr = 0x" + hex(r));
+                        }
+                        mul(p, [q], d);
+                        add(p, p, r);
+                        if (cmp(p, u) !== 0) {
+                            tc.error("Numbers do not add up!" +
+                                "\nu = 0x" + hex(u) +
+                                "\nd = 0x" + hex(d) +
+                                "\nq = " + q +
+                                "\nr = 0x" + hex(r));
+                        }
+                    }
+                    tc.end();
+                }
+                arithm.test_div3by2 = test_div3by2;
+
+                function test_uli(tc) {
+                    test_twos_negation(tc);
+                    test_reciprocal_word(tc);
+                    test_reciprocal_word_3by2(tc);
+                    test_div3by2(tc);
+                    test_neginvm_mont(tc);
+                }
+                arithm.test_uli = test_uli;
+                const LIprefix = "verificatum.arithm.LI";
+
+                function test_identities(tc) {
+                    let e;
+                    const endTime = tc.start([LIprefix + " (identities)"], tc.testTime);
+                    const ONE = LI.ONE;
+                    const ZERO = LI.ZERO;
+                    if (!ONE.add(ZERO).equals(ONE) ||
+                        !ZERO.add(ONE).equals(ONE) ||
+                        !ZERO.add(ZERO).equals(ZERO)) {
+                        tc.error("Ones and zeros don't add!");
+                    }
+                    if (!ONE.mul(ZERO).equals(ZERO) ||
+                        !ZERO.mul(ONE).equals(ZERO) ||
+                        !ZERO.mul(ZERO).equals(ZERO) ||
+                        !ONE.mul(ONE).equals(ONE)) {
+                        tc.error("Ones and zeros don't multiply!");
+                    }
+                    let i = 1;
+                    while (!tc.done(endTime)) {
+                        // We test both positive and negative integers.
+                        for (let j = 0; j < 2; j++) {
+                            // Operations with zero and one.
+                            let x = new LI(i, tc.randomSource);
+                            if (j & 0x1) {
+                                x = x.neg();
+                            }
+                            let a = ZERO.add(x);
+                            let b = x.add(ZERO);
+                            if (!a.equals(x) || !b.equals(x)) {
+                                e = "Addition with zero is not identity!" +
+                                    "\nx = 0x" + x.toHexString() +
+                                    "\n0 + x = 0x" + a.toHexString() +
+                                    "\nx + 0 = 0x" + b.toHexString();
+                                tc.error(e);
+                            }
+                            a = ONE.mul(x);
+                            b = x.mul(ONE);
+                            if (!a.equals(x) || !b.equals(x)) {
+                                e = "Multiplication with one is not identity!" +
+                                    "\nx = 0x" + x.toHexString() +
+                                    "\n1 * x = 0x" + a.toHexString() +
+                                    "\nx * 1 = 0x" + b.toHexString();
+                                tc.error(e);
+                            }
+                        }
+                        i++;
+                    }
+                    tc.end();
+                }
+                arithm.test_identities = test_identities;
+
+                function test_addition_commutativity(tc) {
+                    let e;
+                    const endTime = tc.start([LIprefix + " (addition commutativity)"], tc.testTime);
+                    const s = 100;
+                    while (!tc.done(endTime)) {
+                        let i = 1;
+                        while (!tc.done(endTime) && i < s) {
+                            let j = 1;
+                            while (!tc.done(endTime) && j < s) {
+                                // We try all combinations of signs.
+                                for (let k = 0; k < 4; k++) {
+                                    let x = new LI(i, tc.randomSource);
+                                    if (k & 0x1) {
+                                        x = x.neg();
+                                    }
+                                    let y = new LI(j, tc.randomSource);
+                                    if (k & 0x2) {
+                                        y = y.neg();
+                                    }
+                                    const a = x.add(y);
+                                    const b = y.add(x);
+                                    if (!a.equals(b)) {
+                                        e = "Addition is not commutative!" +
+                                            "\nx = 0x" + x.toHexString() +
+                                            "\ny = 0x" + y.toHexString() +
+                                            "\na = 0x" + a.toHexString() +
+                                            "\nb = 0x" + b.toHexString();
+                                        tc.error(e);
+                                    }
+                                }
+                                j++;
+                            }
+                            i++;
+                        }
+                    }
+                    tc.end();
+                }
+                arithm.test_addition_commutativity = test_addition_commutativity;
+
+                function test_addition_associativity(tc) {
+                    let e;
+                    const endTime = tc.start([LIprefix + " (addition associativity)"], tc.testTime);
+                    const s = 100;
+                    while (!tc.done(endTime)) {
+                        let i = 1;
+                        while (!tc.done(endTime) && i < s) {
+                            let j = 1;
+                            while (!tc.done(endTime) && j < s) {
+                                let k = 1;
+                                while (!tc.done(endTime) && k < s) {
+                                    // We try all combinations of signs.
+                                    for (let l = 0; l < 8; l++) {
+                                        let x = new LI(i, tc.randomSource);
+                                        if (l & 0x1) {
+                                            x = x.neg();
+                                        }
+                                        let y = new LI(j, tc.randomSource);
+                                        if (l & 0x2) {
+                                            y = y.neg();
+                                        }
+                                        let z = new LI(k, tc.randomSource);
+                                        if (l & 0x4) {
+                                            z = z.neg();
+                                        }
+                                        const a = (x.add(y)).add(z);
+                                        const b = x.add(y.add(z));
+                                        if (!a.equals(b)) {
+                                            e = "Addition is not associative!" +
+                                                "\nx = 0x" + x.toHexString() +
+                                                "\ny = 0x" + y.toHexString() +
+                                                "\nz = 0x" + z.toHexString() +
+                                                "\na = 0x" + a.toHexString() +
+                                                "\nb = 0x" + b.toHexString();
+                                            tc.error(e);
+                                        }
+                                    }
+                                    k++;
+                                }
+                                j++;
+                            }
+                            i++;
+                        }
+                    }
+                    tc.end();
+                }
+                arithm.test_addition_associativity = test_addition_associativity;
+
+                function test_multiplication_commutativity(tc) {
+                    let e;
+                    const endTime = tc.start([LIprefix + " (multiplication commutativity)"], tc.testTime);
+                    const s = 100;
+                    while (!tc.done(endTime)) {
+                        let i = 1;
+                        while (!tc.done(endTime) && i < s) {
+                            let j = 1;
+                            while (!tc.done(endTime) && j < s) {
+                                // We try all combinations of signs.
+                                for (let k = 0; k < 4; k++) {
+                                    let x = new LI(i, tc.randomSource);
+                                    if (k & 0x1) {
+                                        x = x.neg();
+                                    }
+                                    let y = new LI(j, tc.randomSource);
+                                    if (k & 0x2) {
+                                        y = y.neg();
+                                    }
+                                    const a = x.mul(y);
+                                    const b = y.mul(x);
+                                    if (!a.equals(b)) {
+                                        e = "Multiplication is not commutative!" +
+                                            "\nx = 0x" + x.toHexString() +
+                                            "\ny = 0x" + y.toHexString() +
+                                            "\na = 0x" + a.toHexString() +
+                                            "\nb = 0x" + b.toHexString();
+                                        tc.error(e);
+                                    }
+                                }
+                                j++;
+                            }
+                            i++;
+                        }
+                    }
+                    tc.end();
+                }
+                arithm.test_multiplication_commutativity = test_multiplication_commutativity;
+
+                function test_squaring(tc) {
+                    let e;
+                    const endTime = tc.start([LIprefix + " (squaring)"], tc.testTime);
+                    const s = 100;
+                    let i = 1;
+                    while (!tc.done(endTime)) {
+                        // We try all combinations of signs.
+                        for (let k = 0; k < 1; k++) {
+                            let x = new LI(i, tc.randomSource);
+                            if (k & 0x1) {
+                                x = x.neg();
+                            }
+                            const y = x.mul(LI.ONE);
+                            const a = x.square();
+                            const b = x.mul(y);
+                            if (!a.equals(b)) {
+                                e = "Squaring is inconsistent with multiplication!" +
+                                    "\nx = 0x" + x.toHexString() +
+                                    "\na = 0x" + a.toHexString() +
+                                    "\nb = 0x" + b.toHexString();
+                                tc.error(e);
+                            }
+                        }
+                        i = ((i + 1) % s) + 1;
+                    }
+                    tc.end();
+                }
+                arithm.test_squaring = test_squaring;
+
+                function test_multiplication_associativity(tc) {
+                    let e;
+                    const endTime = tc.start([LIprefix + " (multiplication associativity)"], tc.testTime);
+                    const s = 100;
+                    while (!tc.done(endTime)) {
+                        let i = 1;
+                        while (!tc.done(endTime) && i < s) {
+                            let j = 1;
+                            while (!tc.done(endTime) && j < s) {
+                                let k = 1;
+                                while (!tc.done(endTime) && k < s) {
+                                    // We try all combinations of signs.
+                                    for (let l = 0; l < 8; l++) {
+                                        let x = new LI(i, tc.randomSource);
+                                        if (l & 0x1) {
+                                            x = x.neg();
+                                        }
+                                        let y = new LI(j, tc.randomSource);
+                                        if (l & 0x2) {
+                                            y = y.neg();
+                                        }
+                                        let z = new LI(k, tc.randomSource);
+                                        if (l & 0x4) {
+                                            z = z.neg();
+                                        }
+                                        const a = (x.mul(y)).mul(z);
+                                        const b = x.mul(y.mul(z));
+                                        if (!a.equals(b)) {
+                                            e = "Multiplication is not associative!" +
+                                                "\nx = 0x" + x.toHexString() +
+                                                "\ny = 0x" + y.toHexString() +
+                                                "\nz = 0x" + z.toHexString() +
+                                                "\na = 0x" + a.toHexString() +
+                                                "\nb = 0x" + b.toHexString();
+                                            tc.error(e);
+                                        }
+                                    }
+                                    k++;
+                                }
+                                j++;
+                            }
+                            i++;
+                        }
+                    }
+                    tc.end();
+                }
+                arithm.test_multiplication_associativity = test_multiplication_associativity;
+
+                function test_distributivity(tc) {
+                    let e;
+                    const endTime = tc.start([LIprefix + " (distributivity)"], tc.testTime);
+                    const s = 100;
+                    while (!tc.done(endTime)) {
+                        let i = 1;
+                        while (!tc.done(endTime) && i < s) {
+                            let j = 1;
+                            while (!tc.done(endTime) && j < s) {
+                                let k = 1;
+                                while (!tc.done(endTime) && k < s) {
+                                    // We try all combinations of signs.
+                                    for (let l = 0; l < 8; l++) {
+                                        let x = new LI(i, tc.randomSource);
+                                        if (l & 0x1) {
+                                            x = x.neg();
+                                        }
+                                        let y = new LI(j, tc.randomSource);
+                                        if (l & 0x2) {
+                                            y = y.neg();
+                                        }
+                                        let z = new LI(k, tc.randomSource);
+                                        if (l & 0x4) {
+                                            z = z.neg();
+                                        }
+                                        const a = x.mul(y.add(z));
+                                        const b = x.mul(y).add(x.mul(z));
+                                        if (!a.equals(b)) {
+                                            e = "Multiplication and addition are not " +
+                                                "transitive!" +
+                                                "\nx = 0x" + x.toHexString() +
+                                                "\ny = 0x" + y.toHexString() +
+                                                "\nz = 0x" + z.toHexString() +
+                                                "\na = 0x" + a.toHexString() +
+                                                "\nb = 0x" + b.toHexString();
+                                            tc.error(e);
+                                        }
+                                    }
+                                    k++;
+                                }
+                                j++;
+                            }
+                            i++;
+                        }
+                    }
+                    tc.end();
+                }
+                arithm.test_distributivity = test_distributivity;
+
+                function test_division_with_zero_remainder(tc) {
+                    let e;
+                    const endTime = tc.start([LIprefix + " (division without remainder)"], tc.testTime);
+                    const s = 100;
+                    while (!tc.done(endTime)) {
+                        let i = 1;
+                        while (!tc.done(endTime) && i < s) {
+                            let j = 1;
+                            while (!tc.done(endTime) && j < s) {
+                                const x = new LI(i, tc.randomSource);
+                                let y = new LI(j, tc.randomSource);
+                                while (y.iszero()) {
+                                    y = new LI(j, tc.randomSource);
+                                }
+                                const p = x.mul(y);
+                                const q = p.div(y);
+                                if (!q.equals(x)) {
+                                    e = "Division with zero remainder failed!" +
+                                        "\nx = 0x" + x.toHexString() +
+                                        "\ny = 0x" + y.toHexString() +
+                                        "\np = 0x" + p.toHexString() +
+                                        "\nq = 0x" + q.toHexString();
+                                    tc.error(e);
+                                }
+                                j++;
+                            }
+                            i++;
+                        }
+                    }
+                    tc.end();
+                }
+                arithm.test_division_with_zero_remainder = test_division_with_zero_remainder;
+
+                function test_division_with_remainder(tc) {
+                    let e;
+                    const endTime = tc.start([LIprefix + " (division with remainder)"], tc.testTime);
+                    const s = 100;
+                    while (!tc.done(endTime)) {
+                        let i = 1;
+                        while (!tc.done(endTime) && i < s) {
+                            let j = 1;
+                            while (!tc.done(endTime) && j < s) {
+                                const x = new LI(i, tc.randomSource);
+                                let y = new LI(j, tc.randomSource);
+                                while (y.iszero()) {
+                                    y = new LI(j, tc.randomSource);
+                                }
+                                const q = x.div(y);
+                                const r = x.mod(y);
+                                const xx = q.mul(y).add(r);
+                                if (!xx.equals(x)) {
+                                    e = "Division with remainder failed!" +
+                                        "\nx = 0x" + x.toHexString() +
+                                        "\ny = 0x" + y.toHexString() +
+                                        "\nq = 0x" + q.toHexString() +
+                                        "\nr = 0x" + r.toHexString() +
+                                        "\nxx = 0x" + xx.toHexString();
+                                    tc.error(e);
+                                }
+                                j++;
+                            }
+                            i++;
+                        }
+                    }
+                    tc.end();
+                }
+                arithm.test_division_with_remainder = test_division_with_remainder;
+
+                function test_modpow(tc, alg) {
+                    let e;
+                    const algname = ModPowAlg[alg];
+                    const endTime = tc.start([LIprefix + ` (naive and ${algname} modpow agree)`], tc.testTime);
+                    const one = LI.ONE.modPow(LI.ZERO, LI.TWO);
+                    if (!one.equals(LI.ONE)) {
+                        tc.error("Failed to exponentiate with zero!");
+                    }
+                    const s = 100;
+                    while (!tc.done(endTime)) {
+                        let i = 1;
+                        while (!tc.done(endTime) && i < s) {
+                            let j = 1;
+                            while (!tc.done(endTime) && j < s) {
+                                let k = 1;
+                                while (!tc.done(endTime) && k < s) {
+                                    let z = LI.ZERO;
+                                    while (z.iszero()) {
+                                        z = new LI(k, tc.randomSource);
+                                        // We need an odd modulus for Montgomery
+                                        // exponentiation to work at all.
+                                        if (alg == ModPowAlg.montgomery && z.getBit(0) === 0) {
+                                            z = z.add(LI.ONE);
+                                        }
+                                    }
+                                    let x = (new LI(i, tc.randomSource)).mod(z);
+                                    let y1 = new LI(j, tc.randomSource);
+                                    const y2 = new LI(j, tc.randomSource);
+                                    // Check that 1^y1 = 0 mod 1, and
+                                    // 1^y1 = 1 mod z for z > 1.
+                                    let c = LI.ONE.modPow(y1, z);
+                                    if (z.equals(LI.ONE)) {
+                                        if (!c.equals(LI.ZERO)) {
+                                            e = "Power of one modulo one is not zero!" +
+                                                "\ny1 = 0x" + y1.toHexString() +
+                                                "\nz = 0x" + z.toHexString() +
+                                                "\nc = 0x" + c.toHexString();
+                                            tc.error(e);
+                                        }
+                                    } else if (!c.equals(LI.ONE)) {
+                                        e = "Power of one modulo modulus > 1 is not one!" +
+                                            "\ny1 = 0x" + y1.toHexString() +
+                                            "\nz = 0x" + z.toHexString() +
+                                            "\nc = 0x" + c.toHexString();
+                                        tc.error(e);
+                                    }
+                                    const a = x.modPow(y1, z, alg);
+                                    // Consistency with naive modpow
+                                    let b = x.modPow(y1, z, ModPowAlg.naive);
+                                    if (!a.equals(b)) {
+                                        e = "Modpow and naive modpow are inconsistent!" +
+                                            "\nx = 0x" + x.toHexString() +
+                                            "\ny1 = 0x" + y1.toHexString() +
+                                            "\nz = 0x" + z.toHexString() +
+                                            "\na = 0x" + a.toHexString() +
+                                            "\nb = 0x" + b.toHexString();
+                                        tc.error(e);
+                                    }
+                                    // Linearity.
+                                    b = x.modPow(y2, z, alg);
+                                    const ab = a.mul(b);
+                                    c = ab.mod(z);
+                                    const ysum = y1.add(y2);
+                                    const cc = x.modPow(ysum, z, alg);
+                                    if (!cc.equals(c)) {
+                                        e = "Modpow is not linear in exponent!" +
+                                            "\nx = 0x" + x.toHexString() +
+                                            "\ny1 = 0x" + y1.toHexString() +
+                                            "\ny2 = 0x" + y2.toHexString() +
+                                            "\nysum = 0x" + ysum.toHexString() +
+                                            "\nz = 0x" + z.toHexString() +
+                                            "\na = 0x" + a.toHexString() +
+                                            "\nb = 0x" + b.toHexString() +
+                                            "\nab = 0x" + ab.toHexString() +
+                                            "\nc = 0x" + c.toHexString() +
+                                            "\ncc = 0x" + cc.toHexString();
+                                        tc.error(e);
+                                    }
+                                    k++;
+                                }
+                                j++;
+                            }
+                            i++;
+                        }
+                    }
+                    tc.end();
+                }
+                arithm.test_modpow = test_modpow;
+
+                function test_egcd(tc) {
+                    let e;
+                    const endTime = tc.start([LIprefix + " (egcd)"], tc.testTime);
+                    const s = 100;
+                    while (!tc.done(endTime)) {
+                        let i = 1;
+                        while (!tc.done(endTime) && i < s) {
+                            let j = 1;
+                            while (!tc.done(endTime) && j < s) {
+                                const x = new LI(i, tc.randomSource);
+                                const y = new LI(j, tc.randomSource);
+                                const res = x.egcd(y);
+                                const a = res[0];
+                                const b = res[1];
+                                const v = res[2];
+                                const c = a.mul(x).add(b.mul(y));
+                                if (!c.equals(v)) {
+                                    e = "Linear function does not give GCD!" +
+                                        "\nx = 0x" + x.toHexString() +
+                                        "\ny = 0x" + y.toHexString() +
+                                        "\na = 0x" + a.toHexString() +
+                                        "\nb = 0x" + b.toHexString() +
+                                        "\nv = 0x" + v.toHexString() +
+                                        "\nc = 0x" + c.toHexString();
+                                    tc.error(e);
+                                }
+                                j++;
+                            }
+                            i++;
+                        }
+                    }
+                    tc.end();
+                }
+                arithm.test_egcd = test_egcd;
+
+                function test_legendre(tc) {
+                    let e;
+                    const endTime = tc.start([LIprefix + " (legendre)"], tc.testTime);
+                    const primes = [];
+                    for (let i = 0; i < arithm.safe_primes.length; i++) {
+                        primes.push(new LI(arithm.safe_primes[i]));
+                    }
+                    const s = 100;
+                    let i = 1;
+                    while (!tc.done(endTime)) {
+                        for (let j = 0; j < primes.length; j++) {
+                            const x = new LI(i, tc.randomSource);
+                            const y = x.neg();
+                            // Here we use the fact that -1 is a non-residue.
+                            const lx = x.legendre(primes[j]);
+                            const ly = y.legendre(primes[j]);
+                            if ((x.iszero() && (lx !== 0 || ly !== 0)) ||
+                                (!x.iszero() &&
+                                    (Math.abs(lx) !== 1 || Math.abs(ly) !== 1 || lx === ly))) {
+                                e = "Computation of Legendre symbol failed!" +
+                                    "\nx = 0x" + x.toHexString() +
+                                    "\ny = 0x" + y.toHexString() +
+                                    "\nlx = 0x" + lx +
+                                    "\nly = 0x" + ly;
+                                tc.error(e);
+                            }
+                        }
+                        if (i === s) {
+                            i = 1;
+                        } else {
+                            i++;
+                        }
+                    }
+                    tc.end();
+                }
+                arithm.test_legendre = test_legendre;
+
+                function test_modSqrt(tc) {
+                    let e;
+                    const endTime = tc.start([LIprefix + " (sqrt)"], tc.testTime);
+                    const primes = [];
+                    for (let i = 0; i < arithm.safe_primes.length; i++) {
+                        primes.push(new LI(arithm.safe_primes[i]));
+                    }
+                    const s = 100;
+                    let i = 1;
+                    while (!tc.done(endTime)) {
+                        for (let j = 0; j < primes.length; j++) {
+                            let x = new LI(i, tc.randomSource);
+                            let y = x.mul(x).mod(primes[j]);
+                            let z = y.modSqrt(primes[j]);
+                            // We don't care which of the roots we get.
+                            let w = z.mul(z).mod(primes[j]);
+                            if (!w.equals(y)) {
+                                e = "Computation of square root failed!" +
+                                    "\np = 0x" + primes[j].toHexString() +
+                                    "\nx = 0x" + x.toHexString() +
+                                    "\ny = 0x" + y.toHexString() +
+                                    "\nz = 0x" + z.toHexString() +
+                                    "\nw = 0x" + w.toHexString();
+                                tc.error(e);
+                            }
+                        }
+                        if (i === s) {
+                            i = 1;
+                        } else {
+                            i++;
+                        }
+                    }
+                    tc.end();
+                }
+                arithm.test_modSqrt = test_modSqrt;
+
+                function test_conversion(tc) {
+                    let e;
+                    const endTime = tc.start([LIprefix + " (conversion)"], tc.testTime);
+                    const s = 100;
+                    let i = 1;
+                    while (!tc.done(endTime)) {
+                        const x = new LI(i, tc.randomSource);
+                        const byteArray = x.toByteArray();
+                        const y = new LI(byteArray);
+                        if (!x.equals(y)) {
+                            e = "Conversion failed!" +
+                                "\nx = 0x" + x.toHexString() +
+                                "\ny = 0x" + y.toHexString();
+                            tc.error(e);
+                        }
+                        if (i === s) {
+                            i = 1;
+                        } else {
+                            i++;
+                        }
+                    }
+                    tc.end();
+                }
+                arithm.test_conversion = test_conversion;
+
+                function test_shifting(tc) {
+                    let e;
+                    const endTime = tc.start([LIprefix + " (shift)"], tc.testTime);
+                    const s = 100;
+                    let i = 1;
+                    while (!tc.done(endTime)) {
+                        const x = new LI(i, tc.randomSource);
+                        for (let j = 0; j <= 64; j++) {
+                            const lx = x.shiftLeft(j);
+                            const y = lx.shiftRight(j);
+                            if (!x.equals(y)) {
+                                e = "Shift failed!" +
+                                    "\nx = 0x" + x.toHexString() +
+                                    "\ny = 0x" + y.toHexString();
+                                tc.error(e);
+                            }
+                        }
+                        const rx = x.shiftRight(i + 1);
+                        if (!rx.equals(LI.ZERO)) {
+                            e = "Right shift failed!" +
+                                "\nx = 0x" + x.toHexString();
+                            tc.error(e);
+                        }
+                        if (i === s) {
+                            i = 1;
+                        } else {
+                            i++;
+                        }
+                    }
+                    tc.end();
+                }
+                arithm.test_shifting = test_shifting;
+
+                function test_hex(tc) {
+                    tc.start([LIprefix + " (hex)"], tc.testTime);
+                    const x = new LI(100, tc.randomSource);
+                    const xhex = x.toHexString();
+                    const x2 = new LI(xhex);
+                    if (!x.equals(x2)) {
+                        tc.error("Failed to convert positive integer to hex! (" + xhex + ")");
+                    }
+                    const y = new LI(100, tc.randomSource);
+                    const yhey = y.toHexString();
+                    const y2 = new LI(yhey);
+                    if (!y.equals(y2)) {
+                        tc.error("Failed to convert negative integer to hex! (" +
+                            yhey + ")");
+                    }
+                    tc.end();
+                }
+                arithm.test_hex = test_hex;
+
+                function test_mul_mont_word(tc) {
+                    // We need this test be fast to allow us to perform exhaustive
+                    // testing. Thus, we tinker with the internal values of LI
+                    // instances.
+                    let e;
+                    let ex = "";
+                    if (WORDSIZE <= 8) {
+                        ex = " - exhaustive";
+                    }
+                    tc.start([LIprefix + ` (mul_mont for word moduli${ex})`], tc.testTime);
+                    const bound = 1 << Math.min(8, WORDSIZE);
+                    // m < 2^28, so we have two additional zero words.
+                    let m = new LI(1, [1, 0, 0]);
+                    // R = b^1, where b = 2^28.
+                    const R = LI.ONE.shiftLeft(WORDSIZE);
+                    // These arrays are not normalized internally when we initialize
+                    // like this.
+                    const x = new LI(1, [1, 0, 0]);
+                    const y = new LI(1, [1, 0, 0]);
+                    // a must have twice as many limbs as m.
+                    const uli_a = [0, 0, 0, 0, 0, 0];
+                    for (let m0 = 1; m0 < bound; m0 += 2) {
+                        // Rmodinv = R^(-1) mod m. Always exist, since R is a power of
+                        // two and m is odd.
+                        let Rmodminv = R.mod(m).modInv(m);
+                        for (let x0 = 0; x0 < m0; x0 += 1) {
+                            x.value[0] = x0;
+                            x.sign = (x0 == 0) ? 0 : 1;
+                            for (let y0 = 0; y0 < m0; y0 += 1) {
+                                y.value[0] = y0;
+                                y.sign = (y0 == 0) ? 0 : 1;
+                                // a = x * y * Rmodinv mod m using Montgomery
+                                // multiplication.
+                                const uli_m = [m.value[0], 0, 0];
+                                mul_mont(uli_a, x.value, y.value, uli_m);
+                                // a = x * y * Rmodinv mod m computed naively.
+                                let a = x.mul(y).mod(m).mul(Rmodminv).mod(m);
+                                if (cmp(uli_a, a.value) != 0) {
+                                    e = "Montgomery multiplication failed for word moduli!" +
+                                        "\nR = 0x" + R.toHexString() +
+                                        "\nRmodminv = 0x" + Rmodminv.toHexString() +
+                                        "\nm = 0x" + m.toHexString() +
+                                        "\nx = 0x" + x.toHexString() +
+                                        "\ny = 0x" + y.toHexString() +
+                                        "\na = 0x" + hex(uli_a) +
+                                        "\naa = 0x" + a.toHexString();
+                                    tc.error(e);
+                                }
+                            }
+                        }
+                        m = m.add(LI.TWO);
+                    }
+                    tc.end();
+                }
+                arithm.test_mul_mont_word = test_mul_mont_word;
+
+                function test_mul_mont(tc) {
+                    let e;
+                    const endTime = tc.start([LIprefix + " (mul_mont for large moduli)"], tc.testTime);
+                    const s = 100;
+                    let bitLength = 2;
+                    while (!tc.done(endTime)) {
+                        // Odd integer with exactly bitLength bits.
+                        let LI_m = new LI(bitLength - 1, tc.randomSource);
+                        LI_m = LI_m.add(LI.ONE.shiftLeft(bitLength - 1));
+                        if (LI_m.getBit(0) == 0) {
+                            LI_m = LI_m.add(LI.ONE);
+                        }
+                        // Smallest n such that m < b^n.
+                        const n = msword(LI_m.value) + 1;
+                        // R = b^n, where b = 2^28.
+                        const LI_R = LI.ONE.shiftLeft(n * 28);
+                        // Rmodinv = R^(-1) mod m. Always exist, since R is a power of
+                        // two and m is odd.
+                        const LI_Rmodminv = LI_R.mod(LI_m).modInv(LI_m);
+                        // Random integers 0 <= x, y < m.
+                        const LI_x = new LI(bitLength + 50, tc.randomSource).mod(LI_m);
+                        const LI_y = new LI(bitLength + 50, tc.randomSource).mod(LI_m);
+                        // a = x * y * Rmodinv mod m using Montgomery multiplication.
+                        let uli_m = newarray(LI_m.value.length + 2);
+                        let uli_x = newarray(uli_m.length);
+                        let uli_y = newarray(uli_m.length);
+                        let uli_a = newarray(2 * uli_m.length);
+                        set(uli_m, LI_m.value);
+                        set(uli_x, LI_x.value);
+                        set(uli_y, LI_y.value);
+                        mul_mont(uli_a, uli_x, uli_y, uli_m);
+                        // a = x * y * Rmodinv mod m computed naively.
+                        const LI_a = LI_x.mul(LI_y).mod(LI_m).mul(LI_Rmodminv).mod(LI_m);
+                        if (cmp(uli_a, LI_a.value) != 0) {
+                            e = "Montgomery multiplication failed!" +
+                                "\nn = " + n +
+                                "\nR = 0x" + LI_R.toHexString() +
+                                "\nRmodinv = 0x" + LI_Rmodminv.toHexString() +
+                                "\nm = 0x" + LI_m.toHexString() +
+                                "\nx = 0x" + LI_x.toHexString() +
+                                "\ny = 0x" + LI_y.toHexString() +
+                                "\na = 0x" + hex(uli_a) +
+                                "\naa = 0x" + LI_a.toHexString();
+                            tc.error(e);
+                        }
+                        bitLength = (bitLength + 1) % s;
+                        if (bitLength === 0) {
+                            bitLength = 2;
+                        }
+                    }
+                    tc.end();
+                }
+                arithm.test_mul_mont = test_mul_mont;
+
+                function test_LI(tc) {
+                    test_identities(tc);
+                    test_addition_commutativity(tc);
+                    test_addition_associativity(tc);
+                    test_squaring(tc);
+                    test_multiplication_commutativity(tc);
+                    test_multiplication_associativity(tc);
+                    test_distributivity(tc);
+                    test_division_with_zero_remainder(tc);
+                    test_division_with_remainder(tc);
+                    test_mul_mont_word(tc);
+                    test_mul_mont(tc);
+                    test_modpow(tc, ModPowAlg.window);
+                    test_modpow(tc, ModPowAlg.montgomery);
+                    test_egcd(tc);
+                    test_legendre(tc);
+                    test_modSqrt(tc);
+                    test_conversion(tc);
+                    test_shifting(tc);
+                    test_hex(tc);
+                }
+                arithm.test_LI = test_LI;
+                /**
+                 * Compute a power-product using the given bases, exponents, and
+                 * modulus. This is a naive implementation for simple use and to debug
+                 * {@link ModPowProd.modPowProd}.
+                 *
+                 * @param bases - Bases.
+                 * @param exponents - Exponents.
+                 * @param modulus - Modulus.
+                 * @returns Power product.
+                 */
+                function modPowProd_naive(bases, exponents, modulus) {
+                    let result = LI.ONE;
+                    for (let i = 0; i < bases.length; i++) {
+                        result = result.modMul(bases[i].modPow(exponents[i], modulus), modulus);
+                    }
+                    return result;
+                }
+
+                function test_ModPowProd(tc) {
+                    const prefix = "verificatum.arithm.ModPowProd";
+                    let e;
+                    let i;
+                    const endTime = tc.start([prefix + " (agrees with naive)"], tc.testTime);
+                    const modulus = new LI(arithm.safe_primes[0]);
+                    const maxNoBases = 30;
+                    while (!tc.done(endTime)) {
+                        for (let noBases = 1; noBases <= maxNoBases; noBases++) {
+                            const bases = [];
+                            for (i = 0; i < noBases; i++) {
+                                bases[i] = new LI(modulus.bitLength(), tc.randomSource);
+                                bases[i] = bases[i].mod(modulus);
+                            }
+                            // Exponents should have somewhat different bit lengths.
+                            const exponents = [];
+                            for (i = 0; i < noBases; i++) {
+                                const len = Math.max(1, modulus.bitLength() - 5 + i);
+                                exponents[i] = new LI(len, tc.randomSource);
+                            }
+                            const maxWidth = Math.min(noBases, ModPowProd.maxWidth);
+                            for (let width = 1; width <= maxWidth; width++) {
+                                const mpp = new ModPowProd(bases, modulus, width);
+                                const a = mpp.modPowProd(exponents);
+                                const b = modPowProd_naive(bases, exponents, modulus);
+                                if (!a.equals(b)) {
+                                    e = "Modular power products disagrees!" +
+                                        "\nnoBases = " + noBases +
+                                        "\nwidth = " + width +
+                                        "\na = " + a.toHexString() +
+                                        "\nb = " + b.toHexString() +
+                                        "\nm = " + modulus.toHexString();
+                                    tc.error(e);
+                                }
+                            }
+                        }
+                    }
+                    tc.end();
+                }
+                arithm.test_ModPowProd = test_ModPowProd;
+
+                function test_FixModPow(tc) {
+                    const prefix = "verificatum.arithm.FixModPow";
+                    const endTime = tc.start([prefix + " (agrees with naive)"], tc.testTime);
+                    const modulus = new LI(arithm.safe_primes[0]);
+                    while (!tc.done(endTime)) {
+                        const basis = new LI(modulus.bitLength(), tc.randomSource);
+                        for (let width = 1; width <= 8; width++) {
+                            const fmp = new FixModPow(basis, modulus, 20, width);
+                            for (let i = 1; i < modulus.bitLength() + 5; i++) {
+                                const exponent = new LI(i, tc.randomSource);
+                                const b = fmp.modPow(exponent);
+                                const c = basis.modPow(exponent, modulus);
+                                if (!b.equals(c)) {
+                                    const e = "Fixed-base exponentiation is wrong!" +
+                                        "\nb = " + b.toHexString() +
+                                        "\nc = " + c.toHexString();
+                                    tc.error(e);
+                                }
+                            }
+                        }
+                    }
+                    tc.end();
+                }
+                arithm.test_FixModPow = test_FixModPow;
+
+                function test_arithm(tc) {
+                    const prefix = "verificatum/arithm/";
+                    tc.startSet(prefix);
+                    test_uli(tc);
+                    test_LI(tc);
+                    test_ModPowProd(tc);
+                    test_FixModPow(tc);
+                }
+                arithm.test_arithm = test_arithm;
+            })(arithm = test.arithm || (test.arithm = {}));
+            let algebra;
+            (function(algebra) {
+                var ByteTree = verificatum.algebra.ByteTree;
+                var ECqPGroup = verificatum.algebra.ECqPGroup;
+                var LI = verificatum.arithm.LI;
+                var ModPGroup = verificatum.algebra.ModPGroup;
+                var PField = verificatum.algebra.PField;
+                var PGroupFactory = verificatum.algebra.PGroupFactory;
+                var PPGroup = verificatum.algebra.PPGroup;
+                var PPRing = verificatum.algebra.PPRing;
+                var byteArrayToHex = verificatum.base.byteArrayToHex;
+                var equalsArray = verificatum.base.equalsArray;
+                var randomArray = verificatum.base.randomArray;
+                var safe_primes = verificatum.dev.test.arithm.safe_primes;
+                var small_primes = verificatum.dev.test.arithm.small_primes;
+                const prefix = "verificatum.algebra.ByteTree";
+
+                function test_valid(tc) {
+                    const endTime = tc.start([prefix + " (valid)"], tc.testTime);
+                    const simpleLen = 20;
+                    let len = 1;
+                    while (!tc.done(endTime)) {
+                        /* eslint-disable @typescript-eslint/no-explicit-any */
+                        const data = randomArray(len, 8, tc.randomSource);
+                        /* eslint-enable @typescript-eslint/no-explicit-any */
+                        // Create leaf from raw data.
+                        const btc = new ByteTree(data);
+                        if (!equalsArray(data, btc.value) ||
+                            btc.nodeType !== ByteTree.LEAF) {
+                            tc.error("Failed to create leaf from raw data!");
+                        }
+                        // Turn it into a byte array, recover it, turn it into a byte
+                        // array and compare.
+                        const bt1 = new ByteTree(data);
+                        const ba1 = bt1.toByteArray();
+                        const bt2 = ByteTree.readByteTreeFromByteArray(ba1);
+                        const ba2 = bt2.toByteArray();
+                        if (!equalsArray(ba1, ba2)) {
+                            tc.error("Failed to store and recover leaf to/from " +
+                                "byte array!");
+                        }
+                        // Turn it into a hex string, recover it, turn it into a hex
+                        // string and compare.
+                        const hex1 = bt1.toHexString();
+                        const hexbt2 = new ByteTree(hex1);
+                        const hex2 = hexbt2.toHexString();
+                        if (hex1 !== hex2) {
+                            tc.error("Failed to store and recover leaf to/from hex " +
+                                "string!");
+                        }
+                        // Create complex tree.
+                        const bts = [];
+                        for (let i = 1; i < 20; i++) {
+                            /* eslint-disable @typescript-eslint/no-explicit-any */
+                            const t = randomArray(i * len, 8, tc.randomSource);
+                            /* eslint-enable @typescript-eslint/no-explicit-any */
+                            bts.push(new ByteTree(t));
+                        }
+                        const c1 = new ByteTree(bts.slice(0, 3));
+                        const c2 = new ByteTree(bts.slice(3, 5));
+                        const c3 = new ByteTree(bts.slice(5, 8));
+                        const c4 = new ByteTree([c1, c2]);
+                        const c5 = new ByteTree([c3, bts[15]]);
+                        // Turn it into a hex string, recover it, turn it into a
+                        // hex string and compare.
+                        const cbt1 = new ByteTree([c1, c2, c3, c4, c5]);
+                        for (let k = 0; k < 2; k++) {
+                            const squeeze = (k === 1);
+                            const hexcbt1 = cbt1.toHexString(squeeze);
+                            const cbt2 = new ByteTree(hexcbt1, squeeze);
+                            const hexcbt2 = cbt2.toHexString(squeeze);
+                            if (hexcbt1 !== hexcbt2) {
+                                tc.error("Failed to store and recover byte tree to/from " +
+                                    "hex string with squeeze = ${squeeze}!");
+                            }
+                        }
+                        const si = cbt1.size();
+                        const le = cbt1.toByteArray().length;
+                        if (si != le) {
+                            tc.error("Computation of size is wrong! (");
+                        }
+                        len = len % (simpleLen - 1) + 1;
+                    }
+                    tc.end();
+                }
+                algebra.test_valid = test_valid;
+
+                function test_invalid(tc) {
+                    tc.start([prefix + " (invalid)"], tc.testTime);
+                    const len = 10;
+                    let failed;
+                    let iba;
+                    /* eslint-disable @typescript-eslint/no-explicit-any */
+                    const data = randomArray(len, 8, tc.randomSource);
+                    /* eslint-enable @typescript-eslint/no-explicit-any */
+                    const bt = new ByteTree(data);
+                    iba = bt.toByteArray();
+                    iba[0] = 2;
+                    failed = true;
+                    try {
+                        ByteTree.readByteTreeFromByteArray(iba);
+                    } catch (err) {
+                        failed = false;
+                    }
+                    if (failed) {
+                        tc.error("Failed to complain about invalid type!");
+                    }
+                    iba = bt.toByteArray();
+                    iba[1] |= 0x80;
+                    failed = true;
+                    try {
+                        ByteTree.readByteTreeFromByteArray(iba);
+                    } catch (err) {
+                        failed = false;
+                    }
+                    if (failed) {
+                        tc.error("Failed to complain about negative length!");
+                    }
+                    iba = bt.toByteArray();
+                    iba[4] += 1;
+                    failed = true;
+                    try {
+                        ByteTree.readByteTreeFromByteArray(iba);
+                    } catch (err) {
+                        failed = false;
+                    }
+                    if (failed) {
+                        tc.error("Failed to complain about missing bytes!");
+                    }
+                    tc.end();
+                }
+                algebra.test_invalid = test_invalid;
+
+                function test_conversion(tc) {
+                    let e;
+                    const endTime = tc.start([prefix + " (conversion LI)"], tc.testTime);
+                    const s = 100;
+                    let i = 1;
+                    while (!tc.done(endTime)) {
+                        const x = new LI(i, tc.randomSource);
+                        const byteTree = ByteTree.LItoByteTree(x);
+                        const z = ByteTree.byteTreeToLI(byteTree);
+                        if (!x.equals(z)) {
+                            e = "Conversion failed!" +
+                                "\nx = 0x" + x.toHexString() +
+                                "\nz = 0x" + z.toHexString();
+                            tc.error(e);
+                        }
+                        if (i === s) {
+                            i = 1;
+                        } else {
+                            i++;
+                        }
+                    }
+                    tc.end();
+                }
+                algebra.test_conversion = test_conversion;
+
+                function test_ByteTree(tc) {
+                    test_valid(tc);
+                    test_invalid(tc);
+                }
+                algebra.test_ByteTree = test_ByteTree;
+                class TestPRing {
+                    constructor(tc, prefix, pRings) {
+                        this.tc = tc;
+                        this.prefix = prefix;
+                        this.pRings = pRings;
+                    }
+                    identities() {
+                        const endTime = this.tc.start([this.prefix + " (identities)"], this.tc.testTime);
+                        for (let i = 0; i < this.pRings.length; i++) {
+                            const ONE = this.pRings[i].getONE();
+                            const ZERO = this.pRings[i].getZERO();
+                            if (!ONE.add(ZERO).equals(ONE) ||
+                                !ZERO.add(ONE).equals(ONE) ||
+                                !ZERO.add(ZERO).equals(ZERO)) {
+                                this.tc.error("Ones and zeros don't add!");
+                            }
+                            if (!ONE.mul(ZERO).equals(ZERO) ||
+                                !ZERO.mul(ONE).equals(ZERO) ||
+                                !ZERO.mul(ZERO).equals(ZERO) ||
+                                !ONE.mul(ONE).equals(ONE)) {
+                                this.tc.error("Ones and zeros don't multiply!");
+                            }
+                        }
+                        let i = 0;
+                        while (!this.tc.done(endTime)) {
+                            const ONE = this.pRings[i].getONE();
+                            const ZERO = this.pRings[i].getZERO();
+                            // Operations with zero and one.
+                            const x = this.pRings[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            let a = ZERO.add(x);
+                            let b = x.add(ZERO);
+                            if (!a.equals(x) || !b.equals(x)) {
+                                const e = "Addition with zero is not identity function!" +
+                                    "\nx = " + x.toString() +
+                                    "\n0 + x = " + a.toString() +
+                                    "\nx + 0 = " + b.toString();
+                                this.tc.error(e);
+                            }
+                            a = ONE.mul(x);
+                            b = x.mul(ONE);
+                            if (!a.equals(x) || !b.equals(x)) {
+                                const e = "Multiplication with one is not identity!" +
+                                    "\nx = " + x.toString() +
+                                    "\n1 * x = " + a.toString() +
+                                    "\nx * 1 = " + b.toString();
+                                this.tc.error(e);
+                            }
+                            i = (i + 1) % this.pRings.length;
+                        }
+                        this.tc.end();
+                    }
+                    addition_commutativity() {
+                        const endTime = this.tc.start([this.prefix + " (addition commutativity)"], this.tc.testTime);
+                        let i = 0;
+                        while (!this.tc.done(endTime)) {
+                            const x = this.pRings[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const y = this.pRings[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const a = x.add(y);
+                            const b = y.add(x);
+                            if (!a.equals(b)) {
+                                const e = "Addition is not commutative!" +
+                                    "\nx = " + x.toString() +
+                                    "\ny = " + y.toString() +
+                                    "\na = " + a.toString() +
+                                    "\nb = " + b.toString();
+                                this.tc.error(e);
+                            }
+                            i = (i + 1) % this.pRings.length;
+                        }
+                        this.tc.end();
+                    }
+                    addition_associativity() {
+                        const endTime = this.tc.start([this.prefix + " (addition associativity)"], this.tc.testTime);
+                        let i = 0;
+                        while (!this.tc.done(endTime)) {
+                            const x = this.pRings[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const y = this.pRings[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const z = this.pRings[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const a = (x.add(y)).add(z);
+                            const b = x.add(y.add(z));
+                            if (!a.equals(b)) {
+                                const e = "Addition is not associative!" +
+                                    "\nx = " + x.toString() +
+                                    "\ny = " + y.toString() +
+                                    "\nz = " + z.toString() +
+                                    "\na = " + a.toString() +
+                                    "\nb = " + b.toString();
+                                this.tc.error(e);
+                            }
+                            i = (i + 1) % this.pRings.length;
+                        }
+                        this.tc.end();
+                    }
+                    multiplication_commutativity() {
+                        const endTime = this.tc.start([this.prefix + " (multiplication commutativity)"], this.tc.testTime);
+                        let i = 0;
+                        while (!this.tc.done(endTime)) {
+                            const x = this.pRings[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const y = this.pRings[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const a = x.mul(y);
+                            const b = y.mul(x);
+                            if (!a.equals(b)) {
+                                const e = "Multiplication is not commutative!" +
+                                    "\nx = " + x.toString() +
+                                    "\ny = " + y.toString() +
+                                    "\na = " + a.toString() +
+                                    "\nb = " + b.toString();
+                                this.tc.error(e);
+                            }
+                            i = (i + 1) % this.pRings.length;
+                        }
+                        this.tc.end();
+                    }
+                    multiplication_associativity() {
+                        const endTime = this.tc.start([this.prefix + " (multiplication associativity)"], this.tc.testTime);
+                        let i = 0;
+                        while (!this.tc.done(endTime)) {
+                            const x = this.pRings[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const y = this.pRings[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const z = this.pRings[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const a = (x.mul(y)).mul(z);
+                            const b = x.mul(y.mul(z));
+                            if (!a.equals(b)) {
+                                const e = "Multiplication is not associative!" +
+                                    "\nx = " + x.toString() +
+                                    "\ny = " + y.toString() +
+                                    "\nz = " + z.toString() +
+                                    "\na = " + a.toString() +
+                                    "\nb = " + b.toString();
+                                this.tc.error(e);
+                            }
+                            i = (i + 1) % this.pRings.length;
+                        }
+                        this.tc.end();
+                    }
+                    distributivity() {
+                        const endTime = this.tc.start([this.prefix + " (distributivity)"], this.tc.testTime);
+                        let i = 0;
+                        while (!this.tc.done(endTime)) {
+                            const x = this.pRings[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const y = this.pRings[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const z = this.pRings[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const a = x.mul(y.add(z));
+                            const b = x.mul(y).add(x.mul(z));
+                            if (!a.equals(b)) {
+                                const e = "Multiplication and addition are not transitive!" +
+                                    "\nx = " + x.toString() +
+                                    "\ny = " + y.toString() +
+                                    "\nz = " + z.toString() +
+                                    "\na = " + a.toString() +
+                                    "\nb = " + b.toString();
+                                this.tc.error(e);
+                            }
+                            i = (i + 1) % this.pRings.length;
+                        }
+                        this.tc.end();
+                    }
+                    subtraction() {
+                        const endTime = this.tc.start([this.prefix + " (subtraction)"], this.tc.testTime);
+                        let i = 0;
+                        while (!this.tc.done(endTime)) {
+                            const x = this.pRings[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const y = this.pRings[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const a = x.sub(y);
+                            const b = a.sub(x);
+                            const c = b.add(y);
+                            if (!c.equals(this.pRings[i].getZERO())) {
+                                const e = "Subtraction is not an additive inverse!" +
+                                    "\nx = " + x.toString() +
+                                    "\ny = " + y.toString() +
+                                    "\na = " + a.toString() +
+                                    "\nb = " + b.toString() +
+                                    "\nc = " + c.toString();
+                                this.tc.error(e);
+                            }
+                            i = (i + 1) % this.pRings.length;
+                        }
+                        this.tc.end();
+                    }
+                    conversion() {
+                        const endTime = this.tc.start([this.prefix + " (conversion)"], this.tc.testTime);
+                        let i = 0;
+                        while (!this.tc.done(endTime)) {
+                            const x = this.pRings[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const byteTree = x.toByteTree();
+                            const y = this.pRings[i].toElement(byteTree);
+                            if (!y.equals(x)) {
+                                const e = "Conversion to/from byte tree failed!" +
+                                    "\nx = " + x.toString() +
+                                    "\ny = " + y.toString();
+                                this.tc.error(e);
+                            }
+                            i = (i + 1) % this.pRings.length;
+                        }
+                        this.tc.end();
+                    }
+                    inversion() {
+                        const endTime = this.tc.start([this.prefix + " (inversion)"], this.tc.testTime);
+                        let i = 0;
+                        while (!this.tc.done(endTime)) {
+                            let x = this.pRings[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            while (!x.invertible()) {
+                                x = this.pRings[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            }
+                            let y = this.pRings[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            while (!y.invertible()) {
+                                y = this.pRings[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            }
+                            // We check that x * y^{-1} * x^{-1} * y.
+                            const a = x.mul(y.inv()).mul(x.inv()).mul(y);
+                            const ONE = this.pRings[i].getONE();
+                            if (!a.equals(ONE)) {
+                                const e = "Inversion is not a multiplicative inverse!" +
+                                    "\nx = " + x.toString() +
+                                    "\ny = " + y.toString() +
+                                    "\na = " + a.toString();
+                                this.tc.error(e);
+                            }
+                            i = (i + 1) % this.pRings.length;
+                        }
+                        this.tc.end();
+                    }
+                    hex() {
+                        this.tc.start([this.prefix + " (hex)"], this.tc.testTime);
+                        for (let i = 0; i < this.pRings.length; i++) {
+                            const x = this.pRings[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            x.toString();
+                        }
+                        this.tc.end();
+                    }
+                }
+                algebra.TestPRing = TestPRing;
+
+                function getPFields() {
+                    const pFields = [];
+                    let i = 0;
+                    for (let j = 0; j < small_primes.length; j++) {
+                        const small_hex = small_primes[j].toString(16);
+                        pFields[i] = new PField(small_hex);
+                        i++;
+                    }
+                    for (let j = 0; j < safe_primes.length; j++) {
+                        pFields[i] = new PField(safe_primes[j]);
+                        i++;
+                    }
+                    return pFields;
+                }
+                class TestPField extends TestPRing {
+                    constructor(tc) {
+                        super(tc, "verificatum.algebra.PField", getPFields());
+                    }
+                    all() {
+                        this.identities();
+                        this.addition_commutativity();
+                        this.addition_associativity();
+                        this.multiplication_commutativity();
+                        this.multiplication_associativity();
+                        this.distributivity();
+                        this.subtraction();
+                        this.inversion();
+                        this.conversion();
+                        this.hex();
+                    }
+                }
+                algebra.TestPField = TestPField;
+
+                function test_PField(tc) {
+                    (new TestPField(tc)).all();
+                }
+                algebra.test_PField = test_PField;
+
+                function getPPRings() {
+                    let tmp;
+                    const smallPField = new PField(small_primes[0]);
+                    const largePField = new PField(safe_primes[0]);
+                    const smallFlatPPRing = new PPRing([smallPField, smallPField, smallPField]);
+                    const largeFlatPPRing = new PPRing([largePField, largePField, largePField]);
+                    tmp = new PPRing([smallPField, smallPField]);
+                    tmp = new PPRing([smallPField, tmp]);
+                    const smallCompPPRing = new PPRing([tmp, smallPField, smallPField]);
+                    tmp = new PPRing([largePField, largePField]);
+                    tmp = new PPRing([largePField, tmp]);
+                    const largeCompPPRing = new PPRing([tmp, largePField, largePField]);
+                    return [smallFlatPPRing, smallCompPPRing, largeFlatPPRing, largeCompPPRing];
+                }
+                class TestPPRing extends TestPRing {
+                    constructor(tc) {
+                        super(tc, "verificatum.algebra.PPRing", getPPRings());
+                    }
+                    projprodring() {
+                        const endTime = this.tc.start([this.prefix + " (proj and prod ring)"], this.tc.testTime);
+                        let i = 0;
+                        while (!this.tc.done(endTime) && i < this.pRings.length) {
+                            const pPRing = this.pRings[i];
+                            const newPRings = [];
+                            for (let j = 0; j < pPRing.getWidth(); j++) {
+                                newPRings[j] = pPRing.project(j);
+                            }
+                            const newPPRing = new PPRing(newPRings);
+                            if (!newPPRing.equals(pPRing)) {
+                                const e = "Projecting to parts and taking product failed!";
+                                this.tc.error(e);
+                            }
+                            i++;
+                        }
+                        this.tc.end();
+                    }
+                    projprodel() {
+                        const endTime = this.tc.start([this.prefix + " (proj and prod element)"], this.tc.testTime);
+                        let i = 0;
+                        while (!this.tc.done(endTime) && i < this.pRings.length) {
+                            const x = this.pRings[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const xs = [];
+                            for (let j = 0; j < x.pRing.getWidth(); j++) {
+                                xs[j] = x.project(j);
+                            }
+                            const y = this.pRings[i].prod(xs);
+                            if (!y.equals(x)) {
+                                const e = "Projecting to parts and taking product failed!";
+                                this.tc.error(e);
+                            }
+                            i++;
+                        }
+                        this.tc.end();
+                    }
+                    all() {
+                        this.identities();
+                        this.addition_commutativity();
+                        this.addition_associativity();
+                        this.multiplication_commutativity();
+                        this.multiplication_associativity();
+                        this.distributivity();
+                        this.subtraction();
+                        this.conversion();
+                        this.inversion();
+                        this.projprodring();
+                        this.projprodel();
+                    }
+                }
+                algebra.TestPPRing = TestPPRing;
+
+                function test_PPRing(tc) {
+                    (new TestPPRing(tc)).all();
+                }
+                algebra.test_PPRing = test_PPRing;
+                class TestPGroup {
+                    constructor(tc, prefix, pGroups) {
+                        this.tc = tc;
+                        this.prefix = prefix;
+                        this.pGroups = pGroups;
+                    }
+                    identities() {
+                        const endTime = this.tc.start([this.prefix + " (identities)"], this.tc.testTime);
+                        for (let i = 0; i < this.pGroups.length; i++) {
+                            const ONE = this.pGroups[i].getONE();
+                            if (!ONE.mul(ONE).equals(ONE)) {
+                                this.tc.error("Ones don't multiply!");
+                            }
+                            if (!ONE.inv().equals(ONE)) {
+                                this.tc.error("Ones don't invert!");
+                            }
+                        }
+                        let i = 0;
+                        while (!this.tc.done(endTime)) {
+                            const ONE = this.pGroups[i].getONE();
+                            // Operations with one.
+                            const x = this.pGroups[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const y = this.pGroups[i].pRing.randomElement(this.tc.randomSource, this.tc.statDist);
+                            let a = ONE.mul(x);
+                            const b = x.mul(ONE);
+                            if (!a.equals(x) || !b.equals(x)) {
+                                const e = "Multiplication with one is not identity function!" +
+                                    "\nx = " + x.toString() +
+                                    "\n1 * x = " + a.toString() +
+                                    "\nx * 1 = " + b.toString();
+                                this.tc.error(e);
+                            }
+                            a = ONE.exp(y);
+                            if (!a.equals(ONE)) {
+                                const e = "Power of one is not one!" +
+                                    "\ny = " + y.toString() +
+                                    "\n1 ^ y = " + a.toString();
+                                this.tc.error(e);
+                            }
+                            i = (i + 1) % this.pGroups.length;
+                        }
+                        this.tc.end();
+                    }
+                    multiplication_commutativity() {
+                        const endTime = this.tc.start([this.prefix + " (multiplication commutativity)"], this.tc.testTime);
+                        let i = 0;
+                        while (!this.tc.done(endTime)) {
+                            const x = this.pGroups[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const y = this.pGroups[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const a = x.mul(y);
+                            const b = y.mul(x);
+                            if (!a.equals(b)) {
+                                const e = "Multiplication is not commutative!" +
+                                    "\nx = " + x.toString() +
+                                    "\ny = " + y.toString() +
+                                    "\na = " + a.toString() +
+                                    "\nb = " + b.toString();
+                                this.tc.error(e);
+                            }
+                            i = (i + 1) % this.pGroups.length;
+                        }
+                        this.tc.end();
+                    }
+                    multiplication_associativity() {
+                        const endTime = this.tc.start([this.prefix + " (multiplication associativity)"], this.tc.testTime);
+                        let i = 0;
+                        while (!this.tc.done(endTime)) {
+                            const x = this.pGroups[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const y = this.pGroups[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const z = this.pGroups[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const a = (x.mul(y)).mul(z);
+                            const b = x.mul(y.mul(z));
+                            if (!a.equals(b)) {
+                                const e = "Multiplication is not associative!" +
+                                    "\nx = " + x.toString() +
+                                    "\ny = " + y.toString() +
+                                    "\nz = " + z.toString() +
+                                    "\na = " + a.toString() +
+                                    "\nb = " + b.toString() +
+                                    "\ngroup = " + this.pGroups[i].toString();
+                                this.tc.error(e);
+                            }
+                            i = (i + 1) % this.pGroups.length;
+                        }
+                        this.tc.end();
+                    }
+                    exp() {
+                        const endTime = this.tc.start([this.prefix + " (exponentiation linearity)"], this.tc.testTime);
+                        let i = 0;
+                        while (!this.tc.done(endTime)) {
+                            const x = this.pGroups[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const s = Math.max(this.pGroups[i].getElementOrder().bitLength() - 5, 1);
+                            const e = Math.max(this.pGroups[i].getElementOrder().bitLength() + 6, 1);
+                            let j = s;
+                            while (!this.tc.done(endTime) && j < e) {
+                                const y = new LI(j, this.tc.randomSource);
+                                let k = s;
+                                while (k < e) {
+                                    const z = new LI(k, this.tc.randomSource);
+                                    const a = x.exp(y);
+                                    const b = x.exp(z);
+                                    const c = x.exp(y.add(z));
+                                    if (!a.mul(b).equals(c)) {
+                                        const ee = "Exponentiation is not linear in exponent!" +
+                                            "\nx = 0x" + x.toString() +
+                                            "\ny = 0x" + y.toHexString() +
+                                            "\nz = 0x" + z.toHexString() +
+                                            "\na = 0x" + a.toString() +
+                                            "\nb = 0x" + b.toString() +
+                                            "\nc = 0x" + c.toString();
+                                        this.tc.error(ee);
+                                    }
+                                    k++;
+                                }
+                                j++;
+                            }
+                            i = (i + 1) % this.pGroups.length;
+                        }
+                        this.tc.end();
+                    }
+                    inversion() {
+                        const endTime = this.tc.start([this.prefix + " (inversion)"], this.tc.testTime);
+                        let i = 0;
+                        while (!this.tc.done(endTime)) {
+                            const ONE = this.pGroups[i].getONE();
+                            const x = this.pGroups[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const xinv = x.inv();
+                            const a = x.mul(xinv);
+                            if (!a.equals(ONE)) {
+                                const e = "Inversion is not a multiplicative inverse!" +
+                                    "\nx = " + x.toString() +
+                                    "\nxinv = " + xinv.toString() +
+                                    "\na = " + a.toString();
+                                this.tc.error(e);
+                            }
+                            i = (i + 1) % this.pGroups.length;
+                        }
+                        this.tc.end();
+                    }
+                    conversion() {
+                        const endTime = this.tc.start([this.prefix + " (conversion)"], this.tc.testTime);
+                        let i = 0;
+                        while (!this.tc.done(endTime)) {
+                            const x = this.pGroups[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            const byteTree = x.toByteTree();
+                            const y = this.pGroups[i].toElement(byteTree);
+                            if (!y.equals(x)) {
+                                const e = "Conversion to/from byte tree failed!" +
+                                    "\nx = " + x.toString() +
+                                    "\ny = " + y.toString();
+                                this.tc.error(e);
+                            }
+                            i = (i + 1) % this.pGroups.length;
+                        }
+                        this.tc.end();
+                    }
+                    encoding() {
+                        const endTime = this.tc.start([this.prefix + " (encoding)"], this.tc.testTime);
+                        let i = 0;
+                        while (!this.tc.done(endTime)) {
+                            for (let j = 0; j < this.pGroups[i].encodeLength; j++) {
+                                const bytes = this.tc.randomSource.getBytes(j);
+                                const el = this.pGroups[i].encode(bytes, 0, bytes.length);
+                                const decoded = [];
+                                el.decode(decoded, 0);
+                                if (!equalsArray(bytes, decoded)) {
+                                    const e = "Encoding/decoding failed!" +
+                                        "\nbytes = " +
+                                        byteArrayToHex(bytes) +
+                                        "\nbytes.length = " + bytes.length +
+                                        "\ndecoded = " +
+                                        byteArrayToHex(decoded) +
+                                        "\ndecoded.length = " + decoded.length;
+                                    this.tc.error(e);
+                                }
+                            }
+                            i = (i + 1) % this.pGroups.length;
+                        }
+                        this.tc.end();
+                    }
+                    hex() {
+                        this.tc.start([this.prefix + " (hex)"], this.tc.testTime);
+                        for (let i = 0; i < this.pGroups.length; i++) {
+                            const x = this.pGroups[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            x.toString();
+                        }
+                        this.tc.end();
+                    }
+                    marshal() {
+                        this.tc.start([this.prefix + " (marshal)"], this.tc.testTime);
+                        for (let i = 0; i < this.pGroups.length; i++) {
+                            const bt = this.pGroups[i].marshal();
+                            const pGroup = PGroupFactory.unmarshalPGroup(bt);
+                            const hex = byteArrayToHex(bt.toByteArray());
+                            const pGroupHex = PGroupFactory.unmarshalPGroup(hex);
+                            if (!pGroup.equals(this.pGroups[i])) {
+                                this.tc.error("Marshal/unmarshal failed for " + i +
+                                    "th group: " +
+                                    this.pGroups[i].toString());
+                            } else if (!pGroupHex.equals(this.pGroups[i])) {
+                                this.tc.error("Marshal/unmarshal failed from hex for " + i +
+                                    "th group: " +
+                                    this.pGroups[i].toString());
+                            }
+                        }
+                        this.tc.end();
+                    }
+                }
+                algebra.TestPGroup = TestPGroup;
+                class TestModPGroup extends TestPGroup {
+                    constructor(tc) {
+                        super(tc, "verificatum.algebra.ModPGroup", ModPGroup.getPGroups());
+                    }
+                    fixed() {
+                        let e;
+                        const endTime = this.tc.start([this.prefix + " (fixed-basis exp)"], this.tc.testTime);
+                        let i = 0;
+                        while (!this.tc.done(endTime)) {
+                            const x = this.pGroups[i].randomElement(this.tc.randomSource, this.tc.statDist);
+                            for (let j = 1; j < 50; j++) {
+                                x.fixed(j);
+                                const y = this.pGroups[i].pRing.randomElement(this.tc.randomSource, this.tc.statDist);
+                                const a = x.exp(y);
+                                x.fixExp = null;
+                                const b = x.exp(y);
+                                if (!a.equals(b)) {
+                                    e = "Fixed-basis exponentiation is wrong!" +
+                                        "\nx = " + x.toString() +
+                                        "\ny = " + y.toString(); +
+                                    "\na = " + a.toString(); +
+                                    "\nb = " + b.toString();
+                                    this.tc.error(e);
+                                }
+                            }
+                            i = (i + 1) % this.pGroups.length;
+                        }
+                        this.tc.end();
+                    }
+                    all() {
+                        this.identities();
+                        this.multiplication_commutativity();
+                        this.multiplication_associativity();
+                        this.exp();
+                        this.fixed();
+                        this.inversion();
+                        this.conversion();
+                        this.encoding();
+                        this.hex();
+                        this.marshal();
+                    }
+                }
+                algebra.TestModPGroup = TestModPGroup;
+
+                function test_ModPGroup(tc) {
+                    (new TestModPGroup(tc)).all();
+                }
+                algebra.test_ModPGroup = test_ModPGroup;
+                class TestECqPGroup extends TestPGroup {
+                    constructor(tc) {
+                        super(tc, "verificatum.algebra.ECqPGroup", ECqPGroup.getPGroups());
+                    }
+                    random() {
+                        const endTime = this.tc.start([this.prefix + " (random element)"], this.tc.testTime);
+                        let i = 9;
+                        while (!this.tc.done(endTime)) {
+                            const pGroup = this.pGroups[i];
+                            const el = pGroup.randomElement(this.tc.randomSource, this.tc.statDist);
+                            // Here we change the type of the integers from SLI to
+                            // LI.
+                            const x = new LI(el.value.x.sign, el.value.x.value);
+                            const y = new LI(el.value.y.sign, el.value.y.value);
+                            if (!pGroup.isOnCurve(x, y)) {
+                                const e = "Random element generation failed!" +
+                                    "\nx = " + x.toString() +
+                                    "\ny = " + y.toString();
+                                this.tc.error(e);
+                            }
+                            i = (i + 1) % this.pGroups.length;
+                        }
+                        this.tc.end();
+                    }
+                    squaring() {
+                        const endTime = this.tc.start([this.prefix + " (squaring)"], this.tc.testTime);
+                        let i = 0;
+                        while (!this.tc.done(endTime)) {
+                            const pGroup = this.pGroups[i];
+                            const x = pGroup.randomElement(this.tc.randomSource, this.tc.statDist);
+                            const y = pGroup.randomElement(this.tc.randomSource, this.tc.statDist);
+                            // We essentially add at a random translated point to
+                            // avoid the special formulas of squaring. We could in
+                            // fact implement squaring like this.
+                            const a = x.mul(y).mul(x).mul(y.inv());
+                            const b = x.square();
+                            if (!a.equals(b)) {
+                                const e = "Squaring and multiplying are not consistent!" +
+                                    "\nx = " + x.toString() +
+                                    "\ny = " + y.toString() +
+                                    "\na = " + a.toString() +
+                                    "\nb = " + b.toString() +
+                                    "\ngroup = " + this.pGroups[i].toString();
+                                this.tc.error(e);
+                            }
+                            i = (i + 1) % this.pGroups.length;
+                        }
+                        this.tc.end();
+                    }
+                    all() {
+                        this.random();
+                        this.identities();
+                        this.multiplication_commutativity();
+                        this.multiplication_associativity();
+                        this.squaring();
+                        this.exp();
+                        this.inversion();
+                        this.conversion();
+                        this.encoding();
+                        this.hex();
+                        this.marshal();
+                    }
+                }
+                algebra.TestECqPGroup = TestECqPGroup;
+
+                function test_ECqPGroup(tc) {
+                    (new TestECqPGroup(tc)).all();
+                }
+                algebra.test_ECqPGroup = test_ECqPGroup;
+                /**
+                 * Generate groups of different structures for testing.
+                 * @returns List of product groups.
+                 */
+                function getPPGroups() {
+                    const smallPGroups = PGroupFactory.getSmallPGroups();
+                    let tmp;
+                    const pPGroups = [];
+                    for (let j = 0; j < smallPGroups.length; j++) {
+                        const flatPPGroup = new PPGroup([smallPGroups[j],
+                            smallPGroups[j],
+                            smallPGroups[j]
+                        ]);
+                        pPGroups.push(flatPPGroup);
+                        tmp = new PPGroup([smallPGroups[j],
+                            smallPGroups[j]
+                        ]);
+                        tmp = new PPGroup([smallPGroups[j],
+                            tmp
+                        ]);
+                        const compPPGroup = new PPGroup([tmp,
+                            smallPGroups[j],
+                            smallPGroups[j]
+                        ]);
+                        pPGroups.push(compPPGroup);
+                    }
+                    return pPGroups;
+                }
+                class TestPPGroup extends TestPGroup {
+                    constructor(tc) {
+                        super(tc, "verificatum.algebra.PPGroup", getPPGroups());
+                    }
+                    projprodgroup() {
+                        const endTime = this.tc.start([this.prefix + " (proj and prod group)"], this.tc.testTime);
+                        let i = 0;
+                        while (!this.tc.done(endTime) && i < this.pGroups.length) {
+                            // this.pGroups[i] is a PPGroup.
+                            const pPGroup = this.pGroups[i];
+                            // We project to its parts.
+                            const newPGroups = [];
+                            for (let j = 0; j < pPGroup.getWidth(); j++) {
+                                newPGroups[j] = pPGroup.project(j);
+                            }
+                            // Take the product of the parts.
+                            const newPPGroup = new PPGroup(newPGroups);
+                            // Verify that we recover the same product group.
+                            if (!newPPGroup.equals(pPGroup)) {
+                                const e = "Projecting to parts and taking product failed!";
+                                this.tc.error(e);
+                            }
+                            i++;
+                        }
+                        this.tc.end();
+                    }
+                    projprodel() {
+                        const endTime = this.tc.start([this.prefix + " (proj and prod element)"], this.tc.testTime);
+                        let i = 0;
+                        while (!this.tc.done(endTime) && i < this.pGroups.length) {
+                            // this.pGroups[i] is a PPGroup.
+                            const pPGroup = this.pGroups[i];
+                            // x is a PPGroupElement.
+                            const x = pPGroup.randomElement(this.tc.randomSource, this.tc.statDist);
+                            const px = x;
+                            // We project to each coordinate.
+                            const xs = [];
+                            for (let j = 0; j < pPGroup.getWidth(); j++) {
+                                xs[j] = px.project(j);
+                            }
+                            // Take the product.
+                            const y = pPGroup.prod(xs);
+                            // Verify that we recover the element.
+                            if (!y.equals(x)) {
+                                const e = "Projecting to parts and taking product failed!";
+                                this.tc.error(e);
+                            }
+                            i++;
+                        }
+                        this.tc.end();
+                    }
+                    all() {
+                        this.identities();
+                        this.multiplication_commutativity();
+                        this.multiplication_associativity();
+                        this.exp();
+                        this.inversion();
+                        this.conversion();
+                        this.encoding();
+                        this.marshal();
+                        this.projprodgroup();
+                        this.projprodel();
+                    }
+                }
+                algebra.TestPPGroup = TestPPGroup;
+
+                function test_PPGroup(tc) {
+                    (new TestPPGroup(tc)).all();
+                }
+                algebra.test_PPGroup = test_PPGroup;
+
+                function test_algebra(tc) {
+                    const prefix = "verificatum/algebra/";
+                    tc.startSet(prefix);
+                    test_ByteTree(tc);
+                    test_PField(tc);
+                    test_PPRing(tc);
+                    test_ModPGroup(tc);
+                    test_ECqPGroup(tc);
+                    test_PPGroup(tc);
+                }
+                algebra.test_algebra = test_algebra;
+            })(algebra = test.algebra || (test.algebra = {}));
+            let crypto;
+            (function(crypto) {
+                var ElGamal = verificatum.crypto.ElGamal;
+                var ElGamalZKPoKWriteIn = verificatum.crypto.ElGamalZKPoKWriteIn;
+                var ExpHom = verificatum.algebra.ExpHom;
+                var PGroupFactory = verificatum.algebra.PGroupFactory;
+                var PPGroup = verificatum.algebra.PPGroup;
+                var PowProdHom = verificatum.algebra.PowProdHom;
+                var SHA256 = verificatum.crypto.SHA256;
+                var SchnorrProof = verificatum.crypto.SchnorrProof;
+                var SigmaProofAnd = verificatum.crypto.SigmaProofAnd;
+                var SigmaProofPara = verificatum.crypto.SigmaProofPara;
+                var asciiToByteArray = verificatum.base.asciiToByteArray;
+                var byteArrayToHex = verificatum.base.byteArrayToHex;
+                crypto.input_output_SHA256 = [
+                    ["", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"],
+                    ["a", "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb"],
+                    ["ab", "fb8e20fc2e4c3f248c60c39bd652f3c1347298bb977b8b4d5903b85055620603"],
+                    ["abc", "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"],
+                    ["abcd", "88d4266fd4e6338d13b845fcf289579d209c897823b9217da3e161936f031589"],
+                    ["abcde", "36bbe50ed96841d10443bcb670d6554f0a34b761be67ec9c4a8ad2c0c44ca42c"],
+                    ["abcdef", "bef57ec7f53a6d40beb640a780a639c83bc29ac8a9816f1fc6c5c6dcd93c4721"],
+                    ["abcdefg", "7d1a54127b222502f5b79b5fb0803061152a44f92b37e23c6527baf665d4da9a"],
+                    ["abcdefgh", "9c56cc51b374c3ba189210d5b6d4bf57790d351c96c47c02190ecf1e430635ab"],
+                    ["abcdefghi", "19cc02f26df43cc571bc9ed7b0c4d29224a3ec229529221725ef76d021c8326f"],
+                    ["abcdefghij", "72399361da6a7754fec986dca5b7cbaf1c810a28ded4abaf56b2106d06cb78b0"],
+                    ["abcdefghijk", "ca2f2069ea0c6e4658222e06f8dd639659cbb5e67cbbba6734bc334a3799bc68"],
+                    ["abcdefghijkl", "d682ed4ca4d989c134ec94f1551e1ec580dd6d5a6ecde9f3d35e6e4a717fbde4"],
+                    ["abcdefghijklm", "ff10304f1af23606ede1e2d8abcdc94c229047a61458d809d8bbd53ede1f6598"],
+                    ["abcdefghijklmn", "0653c7e992d7aad40cb2635738b870e4c154afb346340d02c797d490dd52d5f9"],
+                    ["abcdefghijklmno", "41c7760c50efde99bf574ed8fffc7a6dd3405d546d3da929b214c8945acf8a97"],
+                    ["abcdefghijklmnop", "f39dac6cbaba535e2c207cd0cd8f154974223c848f727f98b3564cea569b41cf"],
+                    ["abcdefghijklmnopq", "918a954ac4dfb54ac39f068d9868227f69ab39bc362e2c9b0083bf6a109d6ad7"],
+                    ["abcdefghijklmnopqr", "2d1222692afaf56e95a8ab00879ed023a00db3e26fa14236e542748579285efa"],
+                    ["abcdefghijklmnopqrs", "e250f886728b77ba63722c7e65fc73e203101a84281b32332fd67cc6a1ae3e22"],
+                    ["abcdefghijklmnopqrst", "dd65eea0329dcb94b17187af9dff28c31a1d78026737a16af75979a1fa4618e5"],
+                    ["abcdefghijklmnopqrstu", "25f62a5a3d414ec6e20907df7f367f2b72625aade552db64c07933f6044fc49a"],
+                    ["abcdefghijklmnopqrstuv", "f69f9b70d1c9a5442258ca76f8b0a7a45fcb4e31c36141b6357ec591328b0624"],
+                    ["abcdefghijklmnopqrstuvw", "7f07818e14d08944ce145629ca54332f5cfad148c590efbcb5c377f4d336e5f4"],
+                    ["abcdefghijklmnopqrstuvwx", "93b0cabf8668e0c534c52a568957499e12a284f59d97dc9b2725ef836804875b"],
+                    ["abcdefghijklmnopqrstuvwxy", "69b980549d5045969285133df773ae91ddd5d0e5c73dc8ee959b2eb223bc5fbb"],
+                    ["abcdefghijklmnopqrstuvwxyz", "71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73"],
+                    ["abcdefghijklmnopqrstuvwxyzw", "d01472bd5be184ccf9c49ef6df8eeec8cad3ed2b45f9143466b1d53c0e9f1c43"],
+                    ["abcdefghijklmnopqrstuvwxyzwA", "ca4f9d7952702a6c0feb93e06e58c5cf884d9455743768f3fb547fcd671dbe67"],
+                    ["abcdefghijklmnopqrstuvwxyzwAB", "1f9ee915f7ed45d8dab7694431996ae5cc50272e8eda9fa566e3c4f7532ce5b5"],
+                    ["abcdefghijklmnopqrstuvwxyzwABC", "63a1639029bad43797e99ce209030365e0a5c763dc9c4d6dfcf62fb45baae544"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCD", "1d2281bd5f5ab727df28b837832585dc3c75494298a9135cdd5eabc4c1874bec"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDE", "08157b90fe76b80c76acb91e1a96b08755723b4c0688c39d9561a5960d155a11"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEF", "262cbf8d1bcf25893032b632ffce206843f15278e03f94c194310b2c4900b664"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFG", "a85e3aadc3af9897000a13d5310bcd0e3b582a1ef2a6f54163ac0938082c6ffb"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGH", "d9993572e767a4d57118bdbf2af69d1c6f1d4cf03a731007bb1eec7bae5621e4"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHI", "7ea9c06952d078013a1ec47f98d5bb019d76e7ef31f746d4a5568836d970a11b"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJ", "5233c4f7c82cdb0d0c3905eefe3addd60af9b6a53273d93e43a2e33d487f7ba2"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJK", "27c2f1950e8ca6e88a6b24b245e2f291f1c7d6cc3ce845c5625edce71e5d9a3a"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKL", "7fcbea3112921c20a33728db86f98ce067bdf8f330bc2b5547b6e0fdbbf177ec"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLM", "0bb83990c75b6955f41d10715d72dec86fb8e9594bb61e4392ab62283d8e5046"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMN", "7eb6fa73c41a6ce5f8ec754a52151927177e0811bc2af60a206330219e25b1f7"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNO", "0eb255535e00a1aa5c82d39b60ed279ad91cbcf313f37bfe1708a729761dbda1"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOP", "5e7d4f28190c76b5f513056f27cc244fb3f4e0eec5cdaf811c26b7f026c20174"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQ", "ea0e5966bd9d2aac8e1779a7ef2d1dc4d19efa608f83f7375db74c12ec681e48"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQR", "7134720453833f47b69c357f10be1fddab2b7b5bf625f235e108686b253d45ca"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRS", "c16caf21f1851532556b7e51ecc88ea4377b8b3afaeffc521458d7da3d5e4deb"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRST", "409a1b09e9c54804380ebd6ad8d84e91834cf1b489b6f833adf93a70dc323056"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTU", "3815761859caaea26c3bed339f0e998d9931ed94049a2f3e9b49a6f2d1afc1e1"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUV", "6fb6f21e1946f655d2a5158493b8273de3c261629fc7769b235248fa852c1e73"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVW", "29bb690fc31cc8d19842b9a484d65c7360ce9e0d0a0a7bcec241d44fb1ecee69"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWX", "a1e75f3b974fea5b4de6a0f466534fa6f280962483b7198a055ce2ceeccb0611"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXY", "9d7e640624887affbcc536a92c194f9f10f394f47536d772b8424a87ca589ee5"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ", "04d1a0b4ceca3c39da7083e76b76b0d45fd4a691c45a548f8ff71268b621855f"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0", "25fbb647a30fa3efc5be95217653b7c17e98ac71e57ec774910f90da1d06fb90"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ01", "032638bc16cc5c1f1cddff1aad235dba3a0870f5e0a601c18d8288ee3bdae781"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ012", "3ca351c88a84aa9d31bcb961c6a2fd234a6af6bd58da92a7dcddc7a38d8b0e6f"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123", "3e49fbdb9882f248cdbe0f0d59ec401f41d00f755525a54ccd45468daeb19efc"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ01234", "c8629a0abb8ced1b052ef7cc9508597ed930daceb3081d7f7ed08d19324e65fa"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ012345", "3a8e8f746fc4bfc3ef8761c3626f1f017e18ea242fc78466427f6725fcd8d6e9"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456", "f6bf58f48daf2a0e288d571e56dd6ce985dc69bd4d1165acb5e15c4851d4a578"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ01234567", "0616bc70933498ad7c7d1f41c3c50730a37031a12994e4e92da4cedce7cb5132"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ012345678", "cdcc1268ada82ad226edb0f67fba5f43aafd65aa87df5c93a8384200f04e83d7"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", "a808c6c7af81169650b87fd073ee4885cfae00177abe302b86233b36f2f81dee"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789a", "83f8464e353f305a0ac8c900c72904e0816f7df62687cc917960444d6d56a52f"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ab", "b39f3812958a0002c5aa3e70b7623746f9ad488b9d7d62b492e9767523cb738a"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abc", "e76908998f2f8c4cb515650a377b758eb546dace331a2775249f5ea029905803"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcd", "4632ab207cbb85f951b737e7fa7dc72a81087fd6f4de17686b4266570f4b2e53"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcde", "3ea05d2f8d86ba43d87897647763a9f6c33cf08b8fd18892470e4d2c990e84e3"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdef", "09d30d9da141177278c3b1f889371d20fe5bb0ccac29b629f32f5fd1811e082f"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefg", "dc16e8a01a66637af7d8d6057a7ec0d1a808f9dfee277e15ec539aa1d1c5bdb0"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefgh", "cb393e3f01ecd6ca7156c7291185ba4686da090f0e1f53c0abc693f2ee180d7a"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghi", "450fcddead23ffa2e6a5e1be0d9a7e9d6b439da22daea2bc4540d0fe89204c64"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghij", "a4cdb8d31a67eeb12b50e8f84dc1a924f81b43e38df75c6c117d4c488315efb7"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijk", "2be815584d57865a84bf72a26dc7e195f53a9e6c50ef061fe9012d6a0b8eea72"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijkl", "484c820b40b812047863138bc68ba24834b4112c621978e20741d7c2f4a41d69"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklm", "05d33d1bf847f8a1e760bd08674e771bf84d78ab6d8d6c1906ca0610c255da2c"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmn", "f5c50838a7087bed62002351032bad895c650e55e4a688f82f315c52d223521f"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmno", "a0b91cb0e7bbbfac56de9c0605a4b8b92b0c602ecc0197419548d6343d3c9f57"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnop", "4e965a8e6296ce032c9f812ac239ca3a5a7b593a0c26b5774311db9f0cc098c1"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopq", "bf7bce0d75406d9538bec098363c34935748190348676ef30938bfcbe1bf2b16"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqr", "08cff4e9d0c680397d2b9e4525851d24e1d435b8eff86581679b664590e55ced"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrs", "4160d1e6fae6870959a7d016651dfe2db4a3129bb6bd19ae433dba2e8851b5db"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrst", "4df2ef9b719245c79ab612402d3054cabd6070ff38f9eadb6664f3765a19bf30"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstu", "80af5a5d180f46e1adca42fc27a58a5ec5e2c929713684e99064e987e4287478"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuv", "21fa852ca16b5db405b4825c271fc850fb5ef1d4910498f5eada5e7cd1cc3e08"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvw", "e737388b4820077bf53fcefeb94ff519a998d123558cd9f1081ecf1855f56aec"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwx", "f8c6c994661d87f2e754d6ed1fd8ce8d92f9e536e07185f38602a7b6b66f9644"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxy", "5467454d8e2a7f046d4d0985577a885e6700645475f649faa55267bb40102640"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz", "f89f139d945636e4a40d13535075f83c404bb5257e64ec10bc08f1873874459c"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzw", "8cffab2a8938f9c13bac4a3fca9c76f0efb890f8e5d55ed0eb7870a1e9d130c5"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwA", "0c95632b31a4a13a5d9570e3caec0d9e65ea5e7581c82fcd9adff821d81116a7"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwAB", "b5f65593bd0984d4f4a7d31728f294ae49083d852bfd16a82ac94870d66e4006"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABC", "a5982be527e8bd2776880961701ef2cf8379db2a59acb95d950ac860d8df0ba6"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCD", "91f4968f0fd10e7776805d22527124d60296ee57719eea6457995c14eb760218"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDE", "cfda8a46ddb8942a64878586c73ee6a5245e04a454930a563a807aff910cb9e9"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEF", "43ec6bd420f79a0cc5aa761d40aeae4099aa75ca1d68264050c543b35049c339"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFG", "5424556f1fac491e766a288edf404a58decd1086374457d8735427a3e0b574f8"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGH", "2091fabfbd4319f3757b4fac46342ed05f227e5d1cc041ebc61ff7678cd1411d"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHI", "c5a871bd38c72ecd5b06165001245c6cb168b2bdef4ac5d4442ffe4c482b431c"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJ", "205ceeff12ad2f9a32172476abbac5561844760f6beb462d80f96719e3dd70e3"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJK", "21dfd0ab4f8195fbde9cc64ba7705c6b9527fb03e6e7ad89ae3b046ccd620e08"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKL", "683e75c63e3ae94a1d2054f99b51c52eb422e395187811e19c2cb3574b981193"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLM", "0bd09cd79406855968c6afad2bb06a84aa33eacc1e72d4e71d0105c3f351f635"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMN", "6b1b6a818a25f73fdfd0526a3fd8fc1dd5999f708e799a7ab5653297a531fb83"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNO", "5af415eaf0a7e83a185718739ac940b840cf516c4053c42c4535c8b7a068eb8f"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOP", "57813bb5b88e5bbc949261ff799319209d78f1a7a5dd9f3476cf931cb1945079"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQ", "e54847db199a30b85fb9d286b8d44ec5761e3f76ea918ab1e5550e6abcd19969"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQR", "8a3ff62f5fd01f3b3e2e6fc8ecfe015b5299a2f9c6798513b34399712a2bbcce"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRS", "343ec596772bd8b68f4c4e3916f64103db2889c8b60462f84fe57403c84aba3b"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRST", "c619a4dc96eb91f1eb664f66371f7f4faf6b7e79031ca94199a9806be6e0ee0d"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTU", "17ebe2f7cb5c7e1ea503895a5c7cd54c34b9377acfbd75998a72544f9350ec1c"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUV", "f994c0d188c03d977cf998a08c61b56f2c978b629d80605d1f2271cbb7312777"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVW", "ee66bdb35bd9bdaa36242382756ed5bb09b01e6274af48a13a45b72f95c67e59"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWX", "223567a7a6f59caa5108b5ff2ffd39dcb510347b26b6f4e0eae937c99b86f568"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXY", "8e412e05c12e6d61eb0dfaedf8cc9dd189b8fa36537860cd96cd65586f6e4087"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ", "57676c4e02ed5b92086249fe34cf5bea75d2f47a1891463301217c73029e9a3c"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0", "85be7dd5f2c5cac3b219b8ab29818b75b77aae9a5a76bb96e7e7eafa682ebfde"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ01", "0e919eb981efd60243e191f8d61ecd5abd966a8a29c378972976ae4c76c51e24"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ012", "c05ffe926ff247279c8b899d10dbe4dab8fa05b6d9f75709ad60304b48711691"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123", "0821db910c8284f4e13e72afbb238b42544cda33d4c7b6e4e092e8d03ae84581"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ01234", "36e5a662bfeff510caca343fac3bfe87e114edafe499381547499d2eb0f68d14"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ012345", "1829878e2c13b52008815d22d83918dba652ce153b6aa10fd2433216591ec9b2"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456", "88d0f61916d0cd879cfb44f5bcb82c877141c539f431ed19f1925b5dfd2c27b6"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ01234567", "aed66e34e5d8a4992168d5f8c3183895e11d98636abe79a018fe0c172a0ff2d1"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ012345678", "eb21678942d6afedee67b091d12ebd13fecd00f2b9aaaf5343a7b738be28aa20"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", "6250bdcd59b0087a1a35e0fe0da70960b8539e878a4d1feb1da10bdcaf238eca"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789a", "69697b43454cdd7fdeb2dde9ba2530163f8a757b8e9289bd8c281c5c1dbea4fc"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ab", "539a980f92a836cfcdd9b191c9173cd389c67695df6595bf505bb2801bbb2c28"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abc", "80c7f576e0f2a46f106726c5f3ee9001b9992da0962382fd562a31c8dc737fce"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcd", "3aad4f6ab1898e0db7841c35fdcfd9bdb27f7af6822297792ac4eec67e80e282"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcde", "a7f221c79dc567e1ef2cfb6ae75de52e65652a6d33d971a1f6d31eb93c4ea97e"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdef", "30e13be5507408a58dd0dc0cef28cc06f2d76409bb027c61fcbf7bb13723a2a3"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefg", "9a9dad30f0f39918d828b6a8b71702f252f09dc260b86851a8afcf0f3169e489"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefgh", "87d8306acd46635708f7066d4f117d8b7468453769d30d829766e1e8af5e70bd"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghi", "2c3542ee1ebac610b2710364e9aa1dfc74be1f0f949475f19ef37197e169bf7d"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghij", "958e42905204f35824ca375066e80d00f64fc1877c432614fd75868be6896ef2"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijk", "46c060f4d70ad1a0fd9e0a9c7a831fa0dcb4d270c859569faf36944ced0891e0"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijkl", "a1e416848276b546d98a7fe45814aaa241bcf50eb0e4e54b7881f11b2ba7ce25"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklm", "b5a111fc6147dfa86915e4e15adb5ffd6416c9f797c5a7f550118b81e968b44f"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmn", "bcee40bd89f36933948b5dddac5a328b8bd5005a2df1eaacf13cedad888b7dde"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmno", "7a3b26908be45c72a68c98b1c5492306f9f36e0087f2ea3b2a109cfb3f6e9081"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnop", "e099dcfae3b75dd2be0c1fe0a7cade10f2a5dc9bf271ec863b742b60b63729f7"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopq", "b7ca9b0ae01c1f8da42ce9bc1d7e8370f1fc261bc42fccff213151c052aa72bd"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqr", "71b602cf97a2ff075fa13449c7b22c503e1b429eb31b94f6d08360d3b6a818ae"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrs", "9817cf4f545889d87234176594777673a3fab7a4dd0729f65b5f0c392cfae4de"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrst", "9f6e6d02541328e4c387360890e0efe0fc94d0228f8cf41135b29b5800d1d13b"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstu", "724eeabff4c8a1a1d4a2dbb23da04f6e92260740b2712b2234fc6f2a9bde1e70"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuv", "abfa84aa347f6c4d4f6abcbd91dbbf7bce768cc9a8ee47279283790db02c69cc"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvw", "7f32e4a4649fb38e3a79442030718028dd064317b953d0ffbd0674a1fdef6503"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwx", "4c343494f829efa5ac08bcb519dcf374e963ba32a4aeca43e7a5e29657612895"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxy", "ef3ed730cecbb030b4acb68adcea622bc7d8e77af5a5d8a7ed9979055b1bfd0f"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz", "a6699f2d9e5aeab592a56061e77ff07c80685f7880e074c7edef0e1d5b596e77"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzw", "104ce484013e6e3868f16875367173c6fdf86f5397d2e30f8ac930df819c0bb0"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwA", "ed2d8912fb8f2e31e932bb4edfc588450e5493cee1c6b6830043cb53ba57ca5c"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwAB", "36ce6414cfdd6fd958b3543f3736f38b40253d3bcf33034f80f26edbb3b96fd8"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABC", "4026a794c6be15bd7cb6b0110fe9cb9242de940c9af00a2a4900fde7419877b9"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCD", "d4bfbae1cd3e3afb1185986f43555c8112640c64035fa9e1befa31a1f37d186a"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDE", "e7582940018f13479a3e968dcc4da1d7ecc00a234b2a8eec3b849729f63711a5"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEF", "ca05c1d3569dd3a4bf8bd7fe5591390b9958d7eb1bd46f8230a4ad061b51ca94"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFG", "76c2cd482945151751e2e6d6f1d2fcc0bd5246d4b688c00dcd811875ed197356"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGH", "5d292d7d9325e981068fff3dd01d3cccbd30cbf4e30008fa7c03da6362bceb8f"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHI", "7baa347eada3d243b785702f4e47c6fd1d071c563d56faa6a059f1f7e6cdeef3"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJ", "9fa95314d5a84deb8f986f6ccafef41294a27eeea084e56ac2fad3fa42373de3"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJK", "849beeb5f12c9c5b14a7c89fba739541d37794b960f19b5d4ef404c57efdc824"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKL", "9cb6bcff8576e9d5cec78fcd00113e0318c8b5d72216a4b96fbb32a4ad4f1d90"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLM", "c4887a9ce01d9cc1ecb5cd3c3681dde835e543282ecf6e15eb8dea41edef435d"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMN", "84c4bf5d9128ba5e2fc54c3d202c53a4240fa47f4111e61e76a1d6a5dd8fdba0"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNO", "91c4af941342c5cc8d43b8756340fee30c43ebba605531fb5b52b36108e4af57"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOP", "3647316e56b61f8e7c8416e8870ea7cd3b58114013d517db32f25366fbc598b9"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQ", "df8f4be3edbe0d0a7fd4703ba5810ce4d1bfb156a6aaf196fbc695f58aba67ee"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQR", "f165e52c2c9a90edf24d5c306d2ecb52747c1d49bd2b1ef88ba86ab641ebdab5"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRS", "59b1a5451bdf477207050fd4b6146391ea40284c611f9c4b6d9a8e96470c244e"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRST", "592bfcc7c0633df60c783196730411f0edcc04fe5a1243001363204e53e7cbc1"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTU", "bbf46977bf1fb12ad44da16552e309cd1ffb5cdf72026b1dc6309b8ec5bccc7f"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUV", "55ec87435e13fd74d2e1cfb4909842ea105f91d5304b1ae998521264c5c9d563"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVW", "8d8c629a038b8c1e6a8b1d102842406133950977a2b6113cbe86683c35376257"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWX", "21bbf3bc922ac2d94fc80636fc58f00d373d76f17c715695b6ef0805a522ca37"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXY", "109d3b6d6debe977610a4fe8267c19a37a4517cc35e284804defa1792ecfcb26"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ", "c9f1300d1b4d081d531b9cf9f067f3c0d6dfa77186d6743f1ce58dda39329cb6"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0", "dca91401c35d2b7f14c164905fa9e2e4dc5d9c4a209883a22ae0352eef70d5af"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ01", "860e647e323928435f209ec603c5b17eab87a8cc7a0b5b8bd22d3f5adb3c4825"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ012", "018d63e5655b5fcecdbc3978e9e898debbeaef6ca5f3b646c8bbddcb0955d9ce"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123", "2946d79d2b3d44cc0f975ef292ce6f5bda69cefe164bb943f633a27718e288bc"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ01234", "aa9fbdb6ff54aec66f0ee7ac3c3224bbca53732fe7b75477cc38da39d63b8f66"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ012345", "3395cd7a71086f037e5d6f98c28cb34dee973a417398f8a66fc1c645ee954517"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456", "00bdeafe83c4ffbf173c44f4c2e893eb2d464d4c0f8b5ca7a90865e39af4a0e8"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ01234567", "02d8639bed44327f0833e5b00eec69a83ac3a9002620345ccc30f4bb10106ba2"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ012345678", "f0b6bc28b70c0aa80e1ae30884f757c9685cacb4f6d0dc8ff5cc3faa55627a51"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", "f704614cadeefcb98e7207c7399d67070673aee7fda80b88edb6521057285a89"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789a", "cb821a2be983dedf2add7c8fac7a399a80839694b434f7cd0ad2a0884859c275"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ab", "074a96cc6e41482df5629024fdc4a0cebeeb75227359ba1eaeeefa21c3c53dd3"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abc", "b0916a7edf73f50877c0b58b9a4acfaa90ec2aa8770433d5f4298b893f30990b"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcd", "2d092c54172d6baa578a6425170d9551ae038ada8b3aa01cd45ef8070c27daae"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcde", "40003b959db10b78b4bd84c09d0700aea7d91ca74fda653a0fe842e87dc951e7"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdef", "05f285358823aafeb77f303a0dc13cf13d4234b106d5c12cf7de840a2a4527eb"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefg", "2297eebab18c97f93537512e3ec6d1607297f4bce662324c2430beb40cdbfaa1"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefgh", "755fde40e7e9c41aa0d4be7fa9a54b927bda765fef143f23556b7467017c8403"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghi", "f102df38581780403891982e2aee58791d5802785c4a42a3d193e170eb687d19"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghij", "46fc61c5cbeca5b22c9093d5ac74874abe1c3313cc352fe8c5856190c281c48c"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijk", "099dfd8137f5aa35984703616f2beaed3516166541d4022150d6814424e620c5"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijkl", "f2884104f78d9bf7bb8a3d8ccd267d3e858c19f563b296aaf82a3d7252d5dfb0"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklm", "4491b09b1c29fd13286f39540c699287de8c3eb97be931661c072671e8e09ff9"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmn", "eeb668a9f14e1900425d973eb0d2d9c4f81b5c61fdb3e8677d9900dd857c76c3"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmno", "5218eece33a1568293f9e0c5d0e2ac0a903893a327a6554a297d7cd82bb4a95d"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnop", "b8c77fe296ccd8252e633ec2583bb1fff00d030658727fce3b1f4a4a4061e845"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopq", "589819586048cd1f289328a9730e88151a716c15a686457b1b97922d73084736"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqr", "e153dd1f382be89178be99710dfad8e9a2d732881480dc48d27a40b985fa23b0"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrs", "33cd085cbfd8c19778583f6001f6d6c129cb1dd3da4fc8334de60bfdc996c5c0"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrst", "79e04aeaca11734737ceae95e96431b15cc6d3fe07674e30ae088625fcc1ab0e"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstu", "f8d6a9aab789e6147a0ada66eb6a413b6102c9c74b99637596b1836698fc4bd4"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuv", "e519e5f1132d4f8e0d44256e45a4b2f9ca71bfe36c9b974ed68de6870eb32832"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvw", "5eb255dbd3bda7adbb40306e65671ac4a5568bff886c41bc4d08b235deb644a2"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwx", "4e8f0c3fdc719b0335e9eec0cd8c8bf99bd955df968fb590abeccc6bea2594c5"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxy", "96530963b36fe776b933f112482b0ebce16f52522e48dba243eb6fdc6c211727"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz", "25b59b806e95d4aaf0e6f2798aad8bc3b2c426010cd439c86de2bc34ca435073"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzw", "466d43b4e5eee41cf6f2c455262a439dede1dcf69389f3251c82dde19955d0e9"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwA", "af352fe7d21f2e278046b9ccd458e103fb88eb95f564d6ebf3f5d55ff08d1e3d"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwAB", "4acbd385165d64dfda8c0acb19d5d3f5f17c3712b2ad354120ddf018b7646699"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABC", "e2d673998779986e209603335b702339e89e996aec982463c5504fbb3030f6e6"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCD", "fe5196f73880dbef5569bbcd2a5129bc501508a2ce735d27fd576affa1f9097c"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDE", "c8d6badfd43bf0d9d3a0824f0d73f388cbfacfc2b1217b5da7702908b764218e"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEF", "ac6273c6302df9fc0c3fc1773be35f908e872b721d993bde981086786493aac2"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFG", "b71d7c9929b6b61da832b7d15d291bb025f12662082c798c9cb6dab46385032b"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGH", "a1dc41b1246e2c18af438d0af048125d24d16f96bcf482c7d28ff17a7a92f93f"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHI", "4f8befbf91d19b514f7a7ba54c17f4453a8381dee3838b173a5516d3a92758ce"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJ", "e0f2bc42c0ae40f2f357ede315e3250ab43cb0e165b63757a8eb680dda47cde5"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJK", "c95e3ed0e55b4658a58350be0ae1b3960413615e20fc216b1076238e2b262184"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKL", "216a82307a3dd8fada85ad33996d4b201a25d2548f9db0fcfca5aa960b6074e9"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLM", "7fb628d5df02321d94727218e04a79b6333c3e3a612687acba7964098c660899"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMN", "c68e5020631720afc5669a8e09229517c5aa55ea347410e6f8e64b96f2fbba92"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNO", "58031a7b05d963344587ab62dbed0d179d771721dafca68aeb720e3d005654f7"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOP", "61424a677698b3d184ea346396d20dee19ed56109de8cd4e58ef379c3ef4306a"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQ", "35f9164060bcec18937a869515c2939cb1f3cd96eb0e23e7ae4c8e77a63ca260"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQR", "784c59a54b50441316cf7cba49ad503546e432ac31ce7819e08ac6054cfffbe7"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRS", "7bd73736c1e021c6ad58a257785c98a0c2b4283e001fcb3729956b8a8eff5c6e"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRST", "b117dc78d64cc188fa5cc739ff5cf7b5aabb09db660ae44523146908cb974c55"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTU", "6773b0a7b85d6bc173bd6903b464b5866018bf742f65dc2d4d785de115e1f50d"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUV", "d112f849878c0699d5a3749d312997d57e9e38067eadd175919d4bffedb6895d"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVW", "ab8cb785f48552b39369dd7b83a8e900eccf8bc7ab24edd5e8cdf0a29129b096"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWX", "a4e32012825ae5e0e8b649ff0a58c9485151121e579bc3e2edd050b4a4338acc"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXY", "099826a69fae21991a428014190b7da26b837c9018b8e298d220f7904c87ca8d"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ", "47f837f9c884dfdbf93a45c38c0603fe92ee50f04b3d2ffbfd58ccd2ad2bc97a"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0", "35352863543913ded0aeeb9c05a97fa4a9c040a78bc673b6e5fd621a3789580e"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ01", "4f2ccdb15a434844ec5cd8ef72943d78686cd1502b663ec214c09a7c34bb2495"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ012", "a9d837dd138258099edba1ecf2dcb481a7c9414815e363fe635585bfa3232e6e"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123", "e8d884a54608a878bf69dbf397957e01af5bd60fc9040cdd2e6a1d31d88a5ff2"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ01234", "bde93eb8ad0139f082c2ab1a6576b31a779464991ece500ded852f3ac4b83d85"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ012345", "ca04e4b023113f61697f08ecefaab63c9f26f3864ccdcd29f1d9fa3eb952097c"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456", "ad944ddee43abee50d8aab0e25b3028f320fc60ebdd0f04a03541e7d892f1ba9"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ01234567", "2c41bb84b784b8526a75e310d478228431257a091f18dc8800bd9cdc450fdc5f"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ012345678", "5d55abe136598b8c7cce5a8cc581f2beb2a15f1f51929fd92997274500b98b10"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", "e693e17d313e7d75feb8c8c11eab8440e42c0b4e338165a9233a0902b78fdeaf"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789a", "ca79672ecd82f58b5ba40836304b4d6ca6b2be2dfdabf155138edc248b6ddea9"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ab", "214c74a4c7e9665c87f71d5bedb013404a5d4f163cc154528ec70033c1c11ef3"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abc", "7da4c63b8a2c6bbe12ada3c2433b05e1150a8e21a27818b3563cc72e066d2b14"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcd", "bffef723f59fc6bc53fff0c359e374accefc63127338abbd4e5d2d00af324299"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcde", "dbd190ace4b112d6d8b792d86103454569b5e896c1f68401b4bc982dbc6fa009"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdef", "776bce4b535da7d91a01c5a2844cf4d98d37385e434d94859a78dce7846b795d"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefg", "65ed7a34a3b2d21cab844ac20a2bde9ebf428426d67dc4e242fbc930f38bd62c"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefgh", "58e30893835e92f621418b2b69e4241eb7b70c759e7646ac99c81310833d2248"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghi", "6d107aa83e558b5d6e46469e6b5a6b23ede28f6398c244017fec785e3df2f133"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghij", "093492133ae42d43a8d2effa6f70664fe873f765ac1440c6ff04513b0235f906"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijk", "091fcaa4fe405c0fb5b9fb9b6ea93bd2ee95fb2c791fd4772d6bc660b778a56c"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijkl", "49f31faefc9977550564ba634abe1adfaf10134df3ddf64fca34350f54ecf425"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklm", "6ad6a9e6943382eccb11275e7693fa034187a714768d40b9c0ffac232fa76fa1"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmn", "86b908c01de08ddfd29a792c959ef521b282dac481612ecfae9d5b2971ca55b4"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmno", "897921111835e65ba6e8f4524149e2a1e98727c5c37b02d0bd9bf27c47461367"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnop", "8ea3f5126c27df2af1218b0c9a22277f8a510f2577a933f4bec5b39017b7b0bd"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopq", "970296f65a267e802363e6377a51b335be4a8596857e34198b38f603f400fa80"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqr", "5d6361f0d5a8627e777dd8e5950754b6d628c3e0d22c5242eb9c731367ef4631"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrs", "63c7642ff1e3453e446a1de070f40b2ad46596bbf08fe3b8644240d19e477dab"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrst", "86d014513bb9637b311a4e9d0b392abaffb3e61c8c39ffbadff980485d840de3"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstu", "4f570406b869d9319aa396e9c91b914259479982299c2fab53522cef2ac70834"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuv", "626423f720cab6fc970cf8fd928e16ed8f8a2bca1936cab09aab474d45ed1235"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvw", "abdbd3eaff53b51772ca0ea4defa5936012aa0f5a2dfe17e5d92eca65d5e8783"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwx", "989132d368315a913a7b0f4edc7a5d077171560f8706f5586e810bf3ed32fc29"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxy", "5fe8551615d7732e43655b4762f26578b51c7faa50a8b3be269ac4dba8c4fb96"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz", "4b88f72caadfb3d03e389c71ab03a9730d712053f93573aa67e1106c172b127e"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzw", "41458b33a6c87ca076faefe7f85126fad54e95be6421b2408e07242346d5562e"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwA", "46450785e6a1505bcf9c6a4c6734063a161ac184b6ab6d638656a6d8c15b8595"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwAB", "d54cafd1631896aaace7c8c33a9ce0e832003b5941899579714a5d98346f6734"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABC", "1a3d83b61afde334e9ed526e1cb959ce525aef81904fd92aa6fadb9cc02786ba"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCD", "afbfc11f505e489d542f66a172976072e6d661d3d21e6cbecbf8f6c5251ed91a"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDE", "b55c464dcf51f2a7ee4017ba3dfc7760bb852a8c5c6b2a86130f646b13553028"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEF", "3b5a66a3cd54247498517e0bea3adaf533529885174e7c228889a27b0cbb32d8"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFG", "33f862db77ecc1242c440f80a73e4753ebe0a950c63aeb50fdb1bc6915b5663e"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGH", "fc80a93ab7cb37e07e28f4fefcc8453243227d1780dff94934c0f3452875edad"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHI", "2b13938bfa214dfee3cb303a4ab021555a544c891e6631bf4b17c792c836a8e7"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJ", "253f12f81748cb8f5d2846565a13596d00603b8103a1ebc7c6dc3da64fd382b2"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJK", "df47da339c3e5d8cf98d69c4aa8be27505100d1b6766e6947c304e7634620862"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKL", "a63907b73bfa37faa7108ec5d6dbfc0bfec0eb263f66acd76788590fcc30ca05"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLM", "8ed4bf6dc1bd3764ce04ce95285466aa2bd8a1122386770f51ade6a67f6f01ec"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMN", "5569900fc9f705cbf5b27946a8c0e8279a2472b49072c8b9634e440d39d70f05"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNO", "3851eaca864ee76482c4ed6f0b6eb8f90176162c442dbaab003b3f4b2aa84ddb"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOP", "f0e25f6c0ad15baaef63afd5c57b334d19e3a3af7d893628c710bea59dd8617d"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQ", "3470d608cf11d9fe44d0bfc1a0b3a2514b74f04d05936fdd80dcf5f03755561e"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQR", "bbcc4f13c5ca6ac2a5d2f15e831f9bed06d1d7f9a4fd5d213d09a64203680405"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRS", "df8b8b159676a699533a161696a4689874ffaa6ae5aa61db515d61ef74b14466"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRST", "72c6ba11f9041344ab437466ec7d90d8ffa67324c855b53434ae2f63668fd9cf"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTU", "9a8ef186f4e05398e4415396cee6c71fb6beff156ef7ddb22b137f5e967c02d9"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUV", "995bd7862f5be36d6cbfc968aebf1be0aac10900ab174c5206051a4099b66147"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVW", "e6d58ca3b795cda7a10b488505ff99505c1f02dd5fabfcbd214c3cee6aec6dc5"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWX", "ed8aee444534f124cb4fdec06e61893ac4a95457c33282d1eada984c65d5ae64"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXY", "b4c37ff73d1d03c9e4ce487c09ab794715bdfa0c7e57c1158a3210d1c47eb3f1"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ", "732258c19bddcbb6468b93ec17ad071b42f01353536f102c3c47266d8e405295"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0", "5a5664d40c5506dae9be56f31456f2fe06781b6853dbaf97fa4853b369068f4f"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ01", "63f1b00640c8d804e50291e03dba57b2ec115acf808ca3a4f31cd8fdbd791f89"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ012", "1dd7cb57c7c021dd0bd2430b15155285eacd2b4bb3b2a76e36cbcdeedb8c5bc8"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123", "73e444726500a61020c87298d44b870e58a2df33b457289c9ab7ad1445d2342f"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ01234", "b109593085765600df9e2350673c9496adeba5dba962ef8efa9b1090d3cfa8bd"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ012345", "ec657596e7fd74a5ae98c5485e881370b347c742eeb9e26dfbf6304114b4d535"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456", "c92a5bfc91bd19647754150d4f245f7c4cff72935e936eedfb1d5f17268fb7b5"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ01234567", "eaba268ce734bf5fdbdacd206cc7e2067fd8f0c1d256c92ba9c3277c0bd63759"],
+                    ["abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzwABCDEFGHIJKLMNOPQRSTUVWXYZ012345678", "fd3324a6d01bce72018453699d2971dc18b5361f5ec752ab8d422a08c2f9e2b2"],
+                ];
+                const input_output_SHA256_NIST = [
+                    ["abc",
+                        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+                    ],
+                    ["abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq",
+                        "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1"
+                    ]
+                ];
+
+                function test_input_output(tc, pairs) {
+                    const hashfunction = new SHA256();
+                    for (let i = 0; i < pairs.length; i++) {
+                        const pair = pairs[i];
+                        const bytes = asciiToByteArray(pair[0]);
+                        const md = hashfunction.hash(bytes);
+                        const mds = byteArrayToHex(md);
+                        if (mds !== pair[1]) {
+                            const e = "Input: " + pair[0] +
+                                "\n" + mds +
+                                "\n!= " + pair[1];
+                            tc.error(e);
+                        }
+                    }
+                }
+                /* Informal testing of the naive SHA256 implementation. This does not
+                 * replace formal verification, but gives decent coverage when the
+                 * list of input/output pairs is large enough.
+                 */
+                function test_SHA256(tc) {
+                    const prefix = "verificatum.crypto.SHA256";
+                    tc.start([prefix + " (SHA-256)"], tc.testTime);
+                    test_input_output(tc, input_output_SHA256_NIST);
+                    test_input_output(tc, crypto.input_output_SHA256);
+                    tc.end();
+                }
+                crypto.test_SHA256 = test_SHA256;
+
+                function test_SchnorrProof(tc) {
+                    const prefix = "verificatum.crypto.SchnorrProof";
+                    const pGroups = PGroupFactory.getSmallPGroups();
+                    const sha256 = new SHA256();
+                    const endTime = tc.start([prefix + " (prove and verify)"], tc.testTime);
+                    while (!tc.done(endTime)) {
+                        for (let i = 0; !tc.done(endTime) && i < pGroups.length; i++) {
+                            const pGroup = pGroups[i];
+                            const g = pGroup.randomElement(tc.randomSource, tc.statDist);
+                            let eh;
+                            let sp;
+                            let witness;
+                            let instance;
+                            // eh(x) = g^x (plain exponentiation)
+                            eh = new ExpHom(pGroup.pRing, g);
+                            sp = new SchnorrProof(eh);
+                            witness = eh.domain.randomElement(tc.randomSource, tc.statDist);
+                            instance = eh.eva(witness);
+                            test_SigmaProof(sp, instance, witness, sha256, tc);
+                            // pPGroup = pGroup x pGroup
+                            const pPGroup = new PPGroup([pGroup, pGroup]);
+                            // b = (c, d)
+                            const t = pGroup.pRing.randomElement(tc.randomSource, tc.statDist);
+                            const c = g.exp(t);
+                            const s = pGroup.pRing.randomElement(tc.randomSource, tc.statDist);
+                            const d = g.exp(s);
+                            const b = pPGroup.prod([c, d]);
+                            // eh(x) = (c^x, d^x) (equality of exponents)
+                            eh = new ExpHom(pGroup.pRing, b);
+                            sp = new SchnorrProof(eh);
+                            witness = eh.domain.randomElement(tc.randomSource, tc.statDist);
+                            instance = eh.eva(witness);
+                            test_SigmaProof(sp, instance, witness, sha256, tc);
+                        }
+                    }
+                    tc.end();
+                }
+                crypto.test_SchnorrProof = test_SchnorrProof;
+
+                function test_SigmaProof(sp, instance, witness, hashfunction, tc) {
+                    let e;
+                    // Verify that honestly computed proofs validate and that
+                    // slightly modified proofs do not.
+                    for (let j = 0; j < 5; j++) {
+                        const label = tc.randomSource.getBytes(j);
+                        const proof = sp.prove(label, instance, witness, hashfunction, tc.randomSource, tc.statDist);
+                        if (!sp.verify(label, instance, hashfunction, proof)) {
+                            e = "Valid proof was rejected!" +
+                                "\nlabel = " + byteArrayToHex(label) +
+                                "\nwitness = " + witness.toString() +
+                                "\ninstance = " + instance.toString() +
+                                "\nproof = " + byteArrayToHex(proof.toByteArray());
+                            tc.error(e);
+                            return false;
+                        }
+                        // We can verify various bit errors and make sure that the
+                        // proof fails as a sanity check as below, but this does not
+                        // guarantee anything.
+                        //
+                        // Single bit error at any point should give a false proof.
+                        // for (var l: size_t = 0; l < proof.length; l++) {
+                        //     for (var b: size_t = 1; b < (1 << 8); b <<= 1) {
+                        //         // Introduce random single-bit errors in each byte.
+                        //         var modproof = proof.slice();
+                        //     modproof[l] ^= b;
+                        //         if (sp.verify(label, instance, hashfunction, modproof)) {
+                        //             e = "Invalid proof was accepted!"
+                        //                 + "\nlabel = " + byteArrayToHex(label)
+                        //                 + "\nwitness = " + witness.toString()
+                        //                 + "\ninstance = " + instance.toString()
+                        //                 + "\nproof = " + byteArrayToHex(proof);
+                        //                 + "\nmodproof = " + byteArrayToHex(modproof);
+                        //             tc.error(e);
+                        //             return false;
+                        //         }
+                        //     }
+                        // }
+                    }
+                    return true;
+                }
+                crypto.test_SigmaProof = test_SigmaProof;
+
+                function test_SigmaProofPara(tc) {
+                    const pGroups = PGroupFactory.getSmallPGroups();
+                    const sha256 = new SHA256();
+                    const prefix = "verificatum.crypto.SigmaProofPara";
+                    const endTime = tc.start([prefix + " (prove and verify)"], tc.testTime);
+                    while (!tc.done(endTime)) {
+                        for (let i = 0; !tc.done(endTime) && i < pGroups.length; i++) {
+                            const pGroup = pGroups[i];
+                            // eh(x) = h^x for different h and x
+                            const sps = [];
+                            const h = [];
+                            const witnesses = [];
+                            const instances = [];
+                            const ehs = [];
+                            for (let j = 0; j < 4; j++) {
+                                // instances[j] = h[j]^witnesses[j]
+                                h[j] = pGroup.randomElement(tc.randomSource, tc.statDist);
+                                ehs[j] = new ExpHom(pGroup.pRing, h[j]);
+                                witnesses[j] = ehs[j].domain.randomElement(tc.randomSource, tc.statDist);
+                                instances[j] = ehs[j].eva(witnesses[j]);
+                                sps[j] = new SchnorrProof(ehs[j]);
+                            }
+                            const sp = new SigmaProofPara(sps);
+                            test_SigmaProof(sp, instances, witnesses, sha256, tc);
+                        }
+                    }
+                    tc.end();
+                }
+                crypto.test_SigmaProofPara = test_SigmaProofPara;
+
+                function test_SigmaProofAnd(tc) {
+                    const pGroups = PGroupFactory.getSmallPGroups();
+                    const sha256 = new SHA256();
+                    const prefix = "verificatum.crypto.SigmaProofAnd";
+                    const endTime = tc.start([prefix + " (prove and verify)"], tc.testTime);
+                    while (!tc.done(endTime)) {
+                        for (let i = 0; !tc.done(endTime) && i < pGroups.length; i++) {
+                            const pGroup = pGroups[i];
+                            const pRing = pGroup.pRing;
+                            const pPGroup = new PPGroup([pGroup, pGroup]);
+                            const pPRing = pPGroup.pRing;
+                            const g = pGroup.randomElement(tc.randomSource, tc.statDist);
+                            let z = pRing.getZERO();
+                            while (!z.invertible()) {
+                                z = pRing.randomElement(tc.randomSource, tc.statDist);
+                            }
+                            const h = g.exp(z);
+                            // Chaum van Heijst Pfitzmann hash function with a trapdoor z.
+                            const pph = new PowProdHom(pPRing, [g, h]);
+                            // Distinct inputs that give the same output.
+                            const x = pRing.randomElement(tc.randomSource, tc.statDist);
+                            const y = pRing.randomElement(tc.randomSource, tc.statDist);
+                            const s = x.add(y.mul(z));
+                            const xp = pRing.randomElement(tc.randomSource, tc.statDist);
+                            const yp = s.sub(xp).mul(z.inv());
+                            const witness1 = pPRing.prod([x, y]);
+                            const witness2 = pPRing.prod([xp, yp]);
+                            const sp1 = new SchnorrProof(pph);
+                            const sp2 = new SchnorrProof(pph);
+                            const sp = new SigmaProofAnd([sp1, sp2]);
+                            const witnesses = [witness1, witness2];
+                            const instance1 = pph.eva(witness1);
+                            const instance2 = pph.eva(witness2);
+                            if (!instance1.equals(instance2)) {
+                                tc.error("Flawed alternative witnesses! " +
+                                    "(Bug in testing code.)");
+                            }
+                            test_SigmaProof(sp, [instance1], witnesses, sha256, tc);
+                        }
+                    }
+                    tc.end();
+                }
+                crypto.test_SigmaProofAnd = test_SigmaProofAnd;
+
+                function test_ElGamal(tc) {
+                    const prefix = "verificatum.crypto.ElGamal";
+                    const endTime = tc.start([prefix + " (encrypt and decrypt)"], tc.testTime);
+                    const pGroups = PGroupFactory.getSmallPGroups();
+                    const maxKeyWidth = 3;
+                    const maxWidth = 4;
+                    let i = 0;
+                    while (!tc.done(endTime)) {
+                        let keyWidth = 1;
+                        while (keyWidth <= maxKeyWidth) {
+                            const yGroup = PPGroup.getWideGroup(pGroups[i], keyWidth);
+                            for (let l = 0; l < 2; l++) {
+                                const eg = new ElGamal(l === 0, yGroup, tc.randomSource, tc.statDist);
+                                const keys = eg.gen();
+                                const pk = keys[0];
+                                const sk = keys[1];
+                                let width = 1;
+                                while (width <= maxWidth) {
+                                    const wpk = eg.widePublicKey(pk, width);
+                                    const wsk = eg.widePrivateKey(sk, width);
+                                    const m = wpk.project(1).pGroup.randomElement(tc.randomSource, tc.statDist);
+                                    for (let j = 0; j < 2; j++) {
+                                        let c;
+                                        let r;
+                                        if (j === 0) {
+                                            r = wsk.pRing.randomElement(tc.randomSource, tc.statDist);
+                                            c = eg.encrypt(wpk, m, r);
+                                        } else {
+                                            r = wsk.pRing.getONE();
+                                            c = eg.encrypt(wpk, m);
+                                        }
+                                        const a = eg.decrypt(wsk, c);
+                                        if (!a.equals(m)) {
+                                            let e = "ElGamal failed!" +
+                                                "\npk = " + pk.toString() +
+                                                "\nsk = " + sk.toString() +
+                                                "\nkeyWidth = " + keyWidth +
+                                                "\nwpk = " + wpk.toString() +
+                                                "\nwsk = " + wsk.toString() +
+                                                "\nwidth = " + width +
+                                                "\nm = " + m.toString() +
+                                                "\nc = " + c.toString() +
+                                                "\na = " + a.toString();
+                                            e += "\nr = " + r.toString();
+                                            tc.error(e);
+                                        }
+                                    }
+                                    width++;
+                                }
+                            }
+                            keyWidth++;
+                        }
+                        i = (i + 1) % pGroups.length;
+                    }
+                    tc.end();
+                }
+                crypto.test_ElGamal = test_ElGamal;
+
+                function test_ElGamalZKPoKWriteIn(tc) {
+                    const prefix = "verificatum.crypto.ElGamalZKPoKWriteIn";
+                    let e;
+                    const endTime = tc.start([prefix + " (encrypt and decrypt)"], tc.testTime);
+                    const pGroups = PGroupFactory.getSmallPGroups();
+                    const maxKeyWidth = 3;
+                    const maxWidth = 4;
+                    const sha256 = new SHA256();
+                    let i = 0;
+                    while (!tc.done(endTime)) {
+                        let keyWidth = 1;
+                        while (keyWidth <= maxKeyWidth) {
+                            const yGroup = PGroupFactory.getWideGroup(pGroups[i], keyWidth);
+                            for (let l = 0; l < 2; l++) {
+                                const ny = new ElGamalZKPoKWriteIn(l === 0, yGroup, sha256, tc.randomSource, tc.statDist);
+                                const label = tc.randomSource.getBytes(10);
+                                const keys = ny.gen();
+                                const pk = keys[0];
+                                const sk = keys[1];
+                                let width = 1;
+                                while (width <= maxWidth) {
+                                    const wpk = ny.widePublicKey(pk, width);
+                                    const wsk = ny.widePrivateKey(sk, width);
+                                    const m = wpk.project(1).pGroup.randomElement(tc.randomSource, 10);
+                                    const c = ny.encrypt(label, wpk, m);
+                                    const a = ny.decrypt(label, wpk, wsk, c);
+                                    e = "";
+                                    if (typeof a === "string") {
+                                        e = "NaorYung failed! (" + a + ")";
+                                    } else {
+                                        const aPGroupElement = a;
+                                        if (!aPGroupElement.equals(m)) {
+                                            e = "NaorYung failed!" +
+                                                "\na = " + a.toString();
+                                        }
+                                    }
+                                    if (e !== "") {
+                                        e = e + "\npk = " + pk.toString() +
+                                            "\nsk = " + sk.toString() +
+                                            "\nkeyWidth = " + keyWidth +
+                                            "\nwpk = " + wpk.toString() +
+                                            "\nwsk = " + wsk.toString() +
+                                            "\nwidth = " + width +
+                                            "\nm = " + m.toString() +
+                                            "\nc = " + c.toString();
+                                        tc.error(e);
+                                    }
+                                    width++;
+                                }
+                            }
+                            keyWidth++;
+                        }
+                        i = (i + 1) % pGroups.length;
+                    }
+                    tc.end();
+                }
+                crypto.test_ElGamalZKPoKWriteIn = test_ElGamalZKPoKWriteIn;
+
+                function test_crypto(tc) {
+                    const prefix = "verificatum/crypto/";
+                    tc.startSet(prefix);
+                    test_SHA256(tc);
+                    test_ElGamal(tc);
+                    test_SchnorrProof(tc);
+                    test_SigmaProofPara(tc);
+                    test_SigmaProofAnd(tc);
+                    // test_SigmaProofOr(tc);
+                    test_ElGamalZKPoKWriteIn(tc);
+                }
+                crypto.test_crypto = test_crypto;
+            })(crypto = test.crypto || (test.crypto = {}));
+            var PGroupFactory = verificatum.algebra.PGroupFactory;
+            var WORDSIZE = verificatum.arithm.uli.WORDSIZE;
+            var ofType = verificatum.base.ofType;
+            var test_algebra = verificatum.dev.test.algebra.test_algebra;
+            var test_arithm = verificatum.dev.test.arithm.test_arithm;
+            var test_crypto = verificatum.dev.test.crypto.test_crypto;
+            var version = verificatum.base.version;
+            var wasm = verificatum.arithm.uli.wasm;
+            /**
+             * Testing and timing functions.
+             */
+            class TestContext {
+                /**
+                 * Creates a context with a given random source.
+                 *
+                 * @param testTime - Regulates the running time of testing.
+                 * @param randomSource - Source of randomness.
+                 * @param statDist - Statistical distance.
+                 */
+                constructor(testTime, randomSource, statDist) {
+                    this.testTime = testTime;
+                    this.randomSource = randomSource;
+                    this.statDist = statDist;
+                }
+                /**
+                 * Starts a test.
+                 *
+                 * @param module - Module name as string.
+                 */
+                startSet(module) {
+                    this.writenl("");
+                    this.writenl("Entering " + module);
+                }
+                /**
+                 * Starts a test.
+                 *
+                 * @param headers - Names for tests.
+                 * @param seconds - Running time of test.
+                 * @returns End time of started test.
+                 */
+                start(headers, seconds) {
+                    let s = "";
+                    if (ofType(headers, "string")) {
+                        s = "Test: " + headers + "...";
+                    } else {
+                        s = "Test: ";
+                        for (let i = 0; i < headers.length; i++) {
+                            if (i > 0) {
+                                s += "\n      ";
+                            }
+                            s += headers[i];
+                        }
+                        s += "... ";
+                    }
+                    this.write(s);
+                    return time() + seconds;
+                }
+                /**
+                 * Returns true if the test should continued to run
+                 * and false otherwise.
+                 *
+                 * @param endEpoch - End time of test.
+                 * @returns True or false depending on if the test should be ended.
+                 */
+                done(endEpoch) {
+                    return time() > endEpoch;
+                }
+                /**
+                 * Prints the end of a test.
+                 */
+                end() {
+                    this.writenl(" done.");
+                }
+                /**
+                 * Prints error.
+                 *
+                 * @param msg - Error message.
+                 */
+                error(msg) {
+                    this.write("\n\n" + msg + "\n\n");
+                    this.write("");
+                    this.exit(0);
+                }
+            }
+            test.TestContext = TestContext;
+
+            function test_verificatum(tc) {
+                const groupTypes = PGroupFactory.getGroupTypes().join(", ");
+                tc.writenl("");
+                tc.writenl(` VTS ${version}`);
+                tc.writenl("------------------------------------------------------------");
+                tc.writenl(" RUNNING TESTS                                              ");
+                tc.writenl(" Please be patient. Some tests take a long time to complete ");
+                tc.writenl(" due to how comprehensive they are. Some are exhaustive.    ");
+                tc.writenl("------------------------------------------------------------");
+                tc.writenl(" Configuration:                                             ");
+                tc.writenl(` WORDSIZE=${WORDSIZE}                                       `);
+                tc.writenl(` WASM=${wasm}                                               `);
+                tc.writenl(` GROUPTYPES=${groupTypes}                                   `);
+                tc.writenl("------------------------------------------------------------");
+                const prefix = "verificatum/";
+                tc.startSet(prefix);
+                test_arithm(tc);
+                test_algebra(tc);
+                test_crypto(tc);
+            }
+            test.test_verificatum = test_verificatum;
+        })(test = dev.test || (dev.test = {}));
+        var hex = verificatum.arithm.uli.hex;
+        var hexbyte = verificatum.base.hexbyte;
+        /**
+         * Debugging functionality.
+         * TSDOC_MODULE
+         */
+        /**
+         * Returns the epoch in milliseconds.
+         * @returns Epoch in milliseconds.
+         */
+        function time_ms() {
+            return (new Date()).getTime();
+        }
+        dev.time_ms = time_ms;
+        /**
+         * Returns the epoch in seconds.
+         * @returns Epoch in seconds.
+         */
+        function time() {
+            return Math.floor(time_ms() / 1000);
+        }
+        dev.time = time;
+        /**
+         * Returns a hexadecimal representation of this input
+         * array made for 28 = 28. It separates words by spaces.
+         *
+         * @param x - Array of words.
+         * @returns Hexadecimal string representation of the array.
+         */
+        function hex28(x) {
+            const h = hex(x);
+            const offset = (7 - h.length % 7) % 7;
+            let i = 0;
+            let s = "";
+            while (i < offset) {
+                s += "0";
+                i++;
+            }
+            let j = 0;
+            while (j < h.length) {
+                s += h[j];
+                i++;
+                if (j < h.length - 1 && i % 7 === 0) {
+                    s += " ";
+                }
+                j++;
+            }
+            return s;
+        }
+        dev.hex28 = hex28;
+        /**
+         * Converts an integer to its hexadecimal encoding.
+         *
+         * @param x - A 32-bit JavaScript "number" that is actually an integer.
+         * @returns Hexadecimal representation of this integer.
+         */
+        function uint32ToHex(x) {
+            let hexString = "";
+            for (let i = 0; i < 4; i++) {
+                hexString = hexbyte(x & 0xFF) + hexString;
+                x >>= 8;
+            }
+            return hexString;
+        }
+        dev.uint32ToHex = uint32ToHex;
+        const hexToBinMap = new Map();
+        hexToBinMap.set('0', '0000');
+        hexToBinMap.set('1', '0001');
+        hexToBinMap.set('2', '0010');
+        hexToBinMap.set('3', '0011');
+        hexToBinMap.set('4', '0100');
+        hexToBinMap.set('5', '0101');
+        hexToBinMap.set('6', '0110');
+        hexToBinMap.set('7', '0111');
+        hexToBinMap.set('8', '1000');
+        hexToBinMap.set('9', '1001');
+        hexToBinMap.set('A', '1010');
+        hexToBinMap.set('B', '1011');
+        hexToBinMap.set('C', '1100');
+        hexToBinMap.set('D', '1101');
+        hexToBinMap.set('E', '1110');
+        hexToBinMap.set('F', '1111');
+        /**
+         * Converts a hexadecimal string into a binary string.
+         *
+         * @param hexString - Hexadecimal string.
+         * @returns Binary string.
+         */
+        function hexToBin(hexString) {
+            let res = "";
+            for (let i = 0; i < hexString.length; i++) {
+                res += hexToBinMap.get(hexString[i]);
+            }
+            return res;
+        }
+        dev.hexToBin = hexToBin;
+    })(dev = verificatum.dev || (verificatum.dev = {}));
 })(verificatum || (verificatum = {}));
 (function(verificatum) {
     let dom;
@@ -8871,8 +12410,6 @@ var verificatum;
         var ElGamalZKPoKServer = verificatum.crypto.ElGamalZKPoKServer;
         var RandomSource = verificatum.base.RandomSource;
         var byteArrayToHex = verificatum.base.byteArrayToHex;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         class WebAPIRandomDevice extends RandomSource {
             constructor() {
                 super();
@@ -8888,8 +12425,6 @@ var verificatum;
             }
         }
         dom.WebAPIRandomDevice = WebAPIRandomDevice;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Utility class for simplifying configuration and optimizing the use
          * of cryptosystems by users.
@@ -8962,8 +12497,6 @@ var verificatum;
             }
         }
         dom.WebAPIElGamalZKPoKComp = WebAPIElGamalZKPoKComp;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Plain client that performs all computations in this thread using
          * the builtin cryptographically strong random source of the WebAPI.
@@ -9004,8 +12537,6 @@ var verificatum;
             }
         }
         dom.WebAPIElGamalZKPoKClient = WebAPIElGamalZKPoKClient;
-        // Copyright 2008-2022 Douglas Wikstrom
-        ;
         /**
          * Plain client that performs all computations in this thread using
          * the builtin cryptographically strong random source of the WebAPI.
@@ -9024,4 +12555,91 @@ var verificatum;
         }
         dom.WebAPIElGamalZKPoKServer = WebAPIElGamalZKPoKServer;
     })(dom = verificatum.dom || (verificatum.dom = {}));
+})(verificatum || (verificatum = {}));
+(function(verificatum) {
+    let devdom;
+    (function(devdom) {
+        var SHA256PRG = verificatum.crypto.SHA256PRG;
+        var Suite = verificatum.dev.bench.Suite;
+        var TestContext = verificatum.dev.test.TestContext;
+        var asciiToByteArray = verificatum.base.asciiToByteArray;
+        var test_verificatum = verificatum.dev.test.test_verificatum;
+        /**
+         * Wrapper of code to be used in a WebWorker thread for benchmarking.
+         * Depending on packaging it may be needed to patch the code.
+         */
+        devdom.benchworker = function() {
+            const statDist = 50;
+            const maxWidth = 4;
+            const minSamples = 3;
+            let suite;
+            onmessage = function(e) {
+                const command = e.data[0];
+                if (command == "initialize") {
+                    const root = e.data[1];
+                    const script = e.data[2];
+                    const seed = e.data[3];
+                    importScripts(root + '/' + script);
+                    suite = new Suite(statDist, maxWidth, seed, "html");
+                    postMessage([command]);
+                } else {
+                    postMessage(suite.bench(command, minSamples));
+                }
+            };
+        };
+        /**
+         * Wrapper of code to be used in a WebWorker thread for testing.
+         * Depending on packaging it may be needed to patch the code.
+         */
+        devdom.testworker = function() {
+            const statDist = 50;
+            onmessage = function(e) {
+                const command = e.data[0];
+                if (command == "initialize") {
+                    const root = e.data[1];
+                    const script = e.data[2];
+                    const seed = e.data[3];
+                    const testTime = parseInt(e.data[4]);
+                    importScripts(root + '/' + script);
+                    const wtc = new WorkerTestContext(testTime, seed, statDist, postMessage);
+                    test_verificatum(wtc);
+                }
+            };
+        };
+        /**
+         * Testing and timing functions.
+         */
+        function rs(seed) {
+            const randomSource = new SHA256PRG();
+            const seedBytes = asciiToByteArray(seed);
+            randomSource.setSeed(seedBytes);
+            return randomSource;
+        }
+        class WorkerTestContext extends TestContext {
+            /**
+             * Creates a context with a given random source.
+             *
+             * @param testTime - Regulates the running time of testing.
+             * @param randomSource - Source of randomness.
+             * @param statDist - Statistical distance.
+             */
+            constructor(testTime, seed, statDist, postMessage) {
+                super(testTime, rs(seed), statDist);
+                this.postMessage = postMessage;
+            }
+            write(s) {
+                postMessage([s]);
+            }
+            writenl(s) {
+                postMessage([s + '<br>']);
+            }
+            /**
+             * Exit aggressively.
+             */
+            exit(exitCode) {
+                self.close();
+            }
+        }
+        devdom.WorkerTestContext = WorkerTestContext;
+    })(devdom = verificatum.devdom || (verificatum.devdom = {}));
 })(verificatum || (verificatum = {}));

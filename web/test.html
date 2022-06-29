@@ -7,7 +7,7 @@
     <title>Test VTS</title>
     <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
     <link rel="stylesheet" href="test.css">
-    <script src="vts-baacd-d-0.0.2.js"></script>
+    <script src="vts-baacd-d-1.0.0-p28.js"></script>
   </head>
   <body>
     
@@ -16,7 +16,8 @@
 
       <b><i>Verificatum TypeScript Cryptographic Library</i></b><br>
       <b><i>Version:  <span id="version"></span></i></b><br>
-      <b><i>Date: <span id="today"></span></i></b><br>
+      <b><i>WASM: <span id="wasm"></span></i></b><br>
+      <b><i>Date: <span id="today"></span></i></b>
     </p>
     <div id="results"></div>
     
@@ -26,6 +27,11 @@
     const minSamples = 3;
     
     document.getElementById("version").innerHTML = verificatum.base.version;
+    if (verificatum.arithm.uli.wasm) {
+	document.getElementById("wasm").innerHTML = "enabled";
+    } else {
+	document.getElementById("wasm").innerHTML = "disabled";
+    }
     document.getElementById("today").innerHTML = verificatum.dev.bench.today();
     
     // This converts the function testworker to a string and wraps it
@@ -56,7 +62,7 @@
 
     worker.postMessage(["initialize",
     			root,
-    			"vts-baacd-d-0.0.2.js",
+    			"vts-baacd-d-1.0.0-p28.js",
     			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 			"5"]);
     </script>
