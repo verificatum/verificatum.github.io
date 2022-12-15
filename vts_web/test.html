@@ -1,0 +1,71 @@
+ <!DOCTYPE html>
+<html>
+  <!--
+      Copyright 2008-2022 Douglas Wikstrom
+    -->
+  <head>
+    <title>Test VTS</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+    <link rel="stylesheet" href="test.css">
+  </head>
+  <body>
+    
+    <h1>Test VTS</h1>
+    <p>
+      <b><i>Verificatum TypeScript Library</i></b><br>
+      <b><i>Version:  <span id="version"></span></i></b><br>
+      <b><i>WASM: <span id="wasm"></span></i></b><br>
+      <b><i>Date: <span id="today"></span></i></b>
+    </p>
+    <div id="results"></div>
+    
+  </body>
+  <script type="module">
+
+    import { verificatum } from "./vts-bamecrd-d-1.2.0-p30.js";
+
+    const minSamples = 3;
+    
+    document.getElementById("version").innerHTML = verificatum.base.version;
+    if (verificatum.arithm.uli.wasm) {
+        document.getElementById("wasm").innerHTML = "enabled";
+    } else {
+        document.getElementById("wasm").innerHTML = "disabled";
+    }
+    document.getElementById("today").innerHTML = verificatum.dev.bench.util.today();
+    
+    // This converts the function testworker to a string and wraps it
+    // in immediate function evaluation to allow it to be embedded in
+    // the library as code and not a string.
+    let code = verificatum.devdom.testworker.toString();
+    // const reg = /import test_verificatum =[^;]*/
+    // code = code.replace(reg, "");
+    code = code.replace("WorkerTestContext(",
+                        "verificatum.devdom.WorkerTestContext(");
+    code = code.replace("test_verificatum(",
+                        "verificatum.dev.test.test_verificatum(");
+    const scriptBlob =
+          new Blob(["(" + code + ")();"], {type: 'text/javascript'});
+    const worker = new Worker(URL.createObjectURL(scriptBlob));
+    
+    // This records the results provided by the worker thread.
+    worker.onmessage = function (e) {
+        var message = e.data[0];
+        document.getElementById("results").innerHTML += message;
+    };
+
+    // Start the sequence of tests here. We do load the worker code
+    // again here, but it is a short script so it does not matter. It
+    // is more important to have a single self-contained file.
+    let root = window.location.href;
+    root = root.slice(0, root.lastIndexOf("/"));
+
+    // We use a modified version of the library here that can be
+    // loaded by web workers. See Makefile.
+    worker.postMessage(["initialize",
+                            root,
+                            "vts-bamecrd-d-1.2.0-p30w.js",
+                            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                        "5"]);
+    </script>
+</html>

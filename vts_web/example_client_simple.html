@@ -1,0 +1,276 @@
+ <!DOCTYPE html>
+<html>
+  <!--
+      Copyright 2008-2022 Douglas Wikstrom
+    -->
+  <head>
+    <title>Examples for VTS: Simple Use of Client Class</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+    <link rel="stylesheet" href="test.css">
+  </head>
+  <body>
+    
+    <h1>Examples for VTS: Simple Use of Client Class</h1>
+    <p>
+      <b><i>Verificatum TypeScript Library</i></b><br>
+      <b><i>Version:  <span id="version"></span></i></b><br>
+      <b><i>WASM: <span id="wasm"></span></i></b>
+    </p>
+    <p>
+      This gives a simplistic example of a client.  Please view the
+      source for detailed comments. The version of the library used is
+      <code>vts-bamecr-d-1.2.0-p30.js</code>. Users should follow
+      the instructions in the <code>Makefile</code> to only load the
+      functionality and groups that they need. We use the
+      group <code>modp3072</code> for simplicity.
+    </p>
+    
+    <h3>Marshalled Public Key Containing Group Description</h3>
+    <p>
+      The client is provided the <i>full</i> public key and encoding
+      of the zero knowledge proof used in the form of a marshalled
+      hexadecimal string. We demonstrate this by generating a public
+      key within the demonstrator. The full public key is never
+      visible when using a real-world encryption client.
+    </p>
+    <textarea id="mpk_text" name="mpk" rows="4" cols="90" wrap="hard" readonly>
+    </textarea>
+    <p>
+      <label for="encodeLength">Number of bytes that can be encrypted:</label>
+      <input type="text" name="encodeLength" id="encodeLength" value="" size="3"
+             maxlength="" readonly>
+    </p>
+
+    <h3>Labeled CCA2 Encryption</h3>
+    <p>
+      A labeled CCA2 cryptosystem should be used in electronic voting
+      applications, i.e., the encryption function takes a label, a
+      public key, and the plaintext as input and produces a
+      ciphertext. To decrypt the <i>same label</i> is needed along
+      with the private key and ciphertext to compute the
+      plaintext. Otherwise the zero-knowledge proof which is part of
+      the ciphertext does not verify and the ciphertext is deemed
+      invalid.
+    </p>
+    <p>
+      The label ties the ciphertext to a given election or session,
+      i.e., it would be provided by the server and read-only to the
+      user. This prevents replay of ciphertexts from one election in
+      another if the same public key is re-used.
+    </p>
+    <p>
+      You may edit the label below after encryption and try to decrypt
+      to demonstrate that the ciphertext becomes invalid.
+    </p>
+    <input type="text" id="label_text" name="label_text" size="64">
+    
+    <h2>Write-in Election</h2>
+    <p>
+      In an election which allows write-in votes the voter simply
+      writes its vote in plaintext.
+    </p>
+    <input type="text" id="wi_text" name="wi_text" size="64">
+    <p>
+      <button id="wi_button">Encrypt</button>
+      &nbsp;&nbsp;<span id="wicinfo_span"></span>
+    </p>
+
+    <h3>Ciphertext</h3>
+    <p>
+      This ciphertext is submitted along with authentication data to
+      the receiver.
+    </p>
+    <textarea id="wic_text" name="wic_text" rows="4" cols="90" wrap="hard" readonly></textarea>
+    <h3>Digest</h3>
+    <p>
+      Digest of ciphertext that can be used as an address at a
+      bulletin board for auditing submitted ciphertexts.
+    </p>
+    <input type="text" id="wid_text" name="wid_text" size="64" readonly>
+    <h3>Seed</h3>
+    <p>
+      The seed used to generate the randomness used during
+      encryption. This may be handed to the user for auditing purposes
+      along with the digest.
+    </p>
+    <input type="text" id="wis_text" name="wis_text" size="64" readonly>
+
+    <h3>Plaintext, or Error in case the Label is Wrong</h3>
+    <p>
+      The ciphertext submitted by the user is first verified to be
+      valid and then shuffled with other ciphertexts and decrypted. To
+      demonstrate both you may either: (1) simply decrypt to see that
+      the plaintext is correct, or (2) modify the label between
+      encryption and decryption the ciphertext to see that it is
+      deemed invalid. (This is shown as "proof error" below.)
+    </p>
+    <p>
+      <button id="dwi_button">Simulate Decryption</button>
+    </p>
+    <textarea id="dwic_text" name="dwic_text" rows="4" cols="90" wrap="hard" readonly></textarea>
+
+  </body>
+
+  <script type="module">
+
+    import { verificatum } from "./vts-bamecr-d-1.2.0-p30.js";
+
+    // #####################################################################
+
+    const asciiToByteArray = verificatum.base.asciiToByteArray;
+    const hexAsByteArray = verificatum.base.hexAsByteArray;
+    const WebAPIElGamalZKPoKClient = verificatum.dom.WebAPIElGamalZKPoKClient;
+    const WebAPIElGamalZKPoKServer = verificatum.dom.WebAPIElGamalZKPoKServer;
+
+    // Marshalled public key.
+    let mpk;
+
+    // The server is only used for demonstration purposes.
+    let server;
+    let format;
+
+    // Ciphertext, digest of ciphertext, and seed used to generate
+    // randomness for encryption.
+    let ciphertext;
+    let digest;
+    let seed;
+
+    // #####################################################################
+    
+    // The code below implements the GUI of the demonstrator in the
+    // simplest possible way.
+    
+    document.getElementById("version").innerHTML = verificatum.base.version;
+    if (verificatum.arithm.uli.wasm) {
+        document.getElementById("wasm").innerHTML = "enabled";
+    } else {
+        document.getElementById("wasm").innerHTML = "disabled";
+    }
+
+    // Utility functions for HTML/JavaScript.
+    function radioValue(name) {
+        const radioButtons =
+              document.querySelectorAll('input[name="' + name + '"]');
+        let value = "";
+        for (const radioButton of radioButtons) {
+            if (radioButton.checked) {
+                value = radioButton.value;
+                break;
+            }
+        }
+        return value;
+    }
+    function setRadioHandler(name, handler) {
+        const radioButtons =
+              document.querySelectorAll('input[name="' + name + '"]');
+        for (const radioButton of radioButtons) {
+            radioButton.onclick = handler;
+        }
+    }
+    function setButtonHandler(name, handler) {
+        const button = document.querySelector('#' + name);
+        button.addEventListener("click", handler);
+    }
+
+    // This cleans the user interface to allow simulation of the
+    // mix-net key generation with different parameters.
+    function cleanCryptoFields() {
+        document.getElementById("wic_text").value = "";
+        document.getElementById("wid_text").value = "";
+        document.getElementById("wis_text").value = "";
+        document.getElementById("dwic_text").value = "";
+        wicinfo_span.innerHTML = "";
+    }
+
+    // Sets the group to use, simulates the generation of a public key
+    // as a mix-net would do, and unmarshals the result as a
+    // real-world client would.
+    function setup() {
+        cleanCryptoFields();
+
+        // Set label.
+        document.getElementById('label_text').value = "My Election";
+        
+        // This creates a simulated server, which would not be part of
+        // a real-world client.
+        server = new WebAPIElGamalZKPoKServer("modp3072");
+        mpk = server.marshalled(true);
+
+        const len = (new WebAPIElGamalZKPoKClient(mpk)).getEncodeLength();
+        document.getElementById("encodeLength").value = "" + len;
+        document.getElementById("wi_text").maxLength = "" + len;
+        document.getElementById("mpk_text").value = mpk;
+    }
+
+    setup();
+
+    setRadioHandler("wi", cleanCryptoFields);
+
+    // ---------------------------------------------------------------------
+    
+    // We use labeled encryption. We allow the user to modify it to
+    // enable demonstration of failing to decrypt due to an invalid
+    // label.
+    function label() {
+        return document.getElementById('label_text').value;
+    }
+
+    // ---------------------------------------------------------------------
+
+    // Illustrates invokation of direct encryption.
+
+    let computing = false;
+    function wi_click() {
+        const vote = document.getElementById('wi_text').value;
+        if (vote == "") {
+            wicinfo_span.innerHTML = "You have not written anything!";
+        } else if (computing) {
+
+            wicinfo_span.innerHTML = "Already computing!";
+
+        } else {
+
+            cleanCryptoFields();
+
+            computing = true;
+
+            wicinfo_span.innerHTML = "Computing...";
+
+            // A real-world client sends the ciphertext to the server
+            // along with authentication data, presents the digest to
+            // the user as a short pointer to later identify its
+            // ciphertext, and the seed to allow the user to audit the
+            // encryption function.
+           (new WebAPIElGamalZKPoKClient(mpk))
+           .encrypt(asciiToByteArray(label()),
+                         asciiToByteArray(vote),
+                         true)
+           .then( ([c, d, s]) => {
+               ciphertext = c;
+               document.getElementById("wic_text").value = c;
+               document.getElementById("wid_text").value = d;
+               document.getElementById("wis_text").value = s;
+               wicinfo_span.innerHTML = "";
+            });
+            computing = false;
+        }
+    }
+    setButtonHandler("wi_button", wi_click);
+
+    // This simulates the decryption which is performed by the server
+    // in real-world applications.
+    
+    function dwi_click() {
+        try {
+            const plaintext = server.decrypt(asciiToByteArray(label()),
+                                             hexAsByteArray(ciphertext),
+                                             true);
+            document.getElementById("dwic_text").value = plaintext;
+        } catch (e) {
+            document.getElementById("dwic_text").value = e.message;
+        }
+    }
+    setButtonHandler("dwi_button", dwi_click);
+
+    </script>
+</html>

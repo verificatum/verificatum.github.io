@@ -1,0 +1,495 @@
+ <!DOCTYPE html>
+<html>
+  <!--
+      Copyright 2008-2022 Douglas Wikstrom
+    -->
+  <head>
+    <title>Examples for VTS: Using Functionality Directly</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+    <link rel="stylesheet" href="test.css">
+  </head>
+  <body>
+    
+    <h1>Examples for VTS: Using Functionality Directly</h1>
+    <p>
+      <b><i>Verificatum TypeScript Library</i></b><br>
+      <b><i>Version:  <span id="version"></span></i></b><br>
+      <b><i>WASM: <span id="wasm"></span></i></b>
+    </p>
+    <p>
+      This gives an example of how the library can be used
+      directly. Please view the source for detailed comments and the
+      example JavaScript routines that you may copy and paste into
+      your own client.
+    </p>
+    <p>
+      The version of the library used is
+      <code>vts-bamecr-d-1.2.0-p30.js</code> which is built
+      with <code>make jsfiles</code>, i.e., it is the library free of
+      any dependencies except a wrapper of the builtin
+      cryptographically strong pseudo random generator from the
+      WebAPI.
+    </p>
+    <p>
+      Users should follow the instructions in
+      the <code>Makefile</code> to only load the functionality and
+      groups that they need. This reduces the size of the file and is
+      prudent from a security point of view.
+    </p>
+
+    <h2>Parameters Used in the Examples</h2>
+    <p>
+      The library can use different groups. Please try out the groups
+      that you are interested in.
+    </p>
+    <p>
+      <input type="radio" name="group" value="modp3072" id="modp3072">
+      <label for="modp3072">modp3072</label>&nbsp&nbsp
+      <input type="radio" name="group" value="modp4096" id="modp4096">
+      <label for="modp4096">modp4096</label>&nbsp&nbsp
+      <input type="radio" name="group" value="modp6144" id="modp6144">
+      <label for="modp6144">modp6144</label>&nbsp&nbsp
+      <input type="radio" name="group" value="P-256" id="P-256">
+      <label for="P-256">P-256</label>&nbsp&nbsp
+      <input type="radio" name="group" value="secp384r1" id="secp384r1">
+      <label for="secp384r1">secp384r1</label>&nbsp&nbsp
+      <input type="radio" name="group" value="P-521" id="P-521">
+      <label for="P-521">P-521</label>
+    </p>
+
+    <h3>Marshalled Public Key Containing Group Description</h3>
+    <p>
+      The client is provided the <i>full</i> public key in the form of
+      a marshalled hexadecimal string which encodes both the group
+      used as well as the public key. We demonstrate this by
+      generating a full public key in this format within the
+      demonstrator.
+    </p>
+    <textarea id="mpk_text" name="mpk" rows="4" cols="90" wrap="hard" readonly>
+    </textarea>
+
+    <h3>Public Key Used to Encrypt</h3>
+    <p>
+      The client recovers the public key used for encryption from the
+      marshalled full public key.
+    </p>
+    <textarea id="pk_text" name="pk" rows="4" cols="90" wrap="hard" readonly>
+    </textarea>
+
+    <h3>Labeled CCA2 Encryption</h3>
+    <p>
+      A labeled CCA2 cryptosystem should be used in electronic voting
+      applications, i.e., the encryption function takes a label, a
+      public key, and the plaintext as input and produces a
+      ciphertext. To decrypt the <i>same label</i> is needed along
+      with the private key and ciphertext to compute the
+      plaintext. Otherwise the zero-knowledge proof which is part of
+      the ciphertext does not verify and the ciphertext is deemed
+      invalid.
+    </p>
+    <p>
+      The label ties the ciphertext to a given election or session,
+      i.e., it would be provided by the server and read-only to the
+      user. This prevents replay of ciphertexts from one election in
+      another if the same public key is re-used.
+    </p>
+    <p>
+      You may edit the label below after encryption and try to decrypt
+      to demonstrate that the ciphertext becomes invalid.
+    </p>
+    <textarea id="label_text" name="label_text" rows="1" cols="90" wrap="hard">
+    </textarea>
+
+    <h2>Multiple Choice Election (No Pre-computation)</h2>
+    <p>
+      Encryption without pre-computation causes noticeably poor
+      responsiveness when a multiplicative group with reasonable
+      security level is used, but not when an elliptic curve group is
+      used. Thus, it is recommended to use pre-computation in the
+      former case.
+    </p>
+    <div>
+      <input type="radio" name="mc" value="Candidate 1" id="mc1">
+      <label for="mc1">Candidate 1</label>
+    </div>
+    <div>
+      <input type="radio" name="mc" value="Candidate 2" id="mc2">
+      <label for="mc2">Candidate 2</label>
+    </div>
+    <div>
+      <input type="radio" name="mc" value="Candidate 3" id="mc3">
+      <label for="mc3">Candidate 3</label>
+    </div>
+    <p>
+      <button id="mc_button">Encrypt</button>
+    </p>
+    <div id="mccinfo_div"></div>
+
+    <h3>Ciphertext</h3>
+    <p>
+      This hexadecimal string (or its corresponding byte array) is
+      what is submitted along with authentication data to the vote
+      collection server, which performs the part of the decryption
+      needed to verify that the ciphertext is valid.
+    </p>
+    <textarea id="mcc_text" name="mcc_text" rows="4" cols="90" wrap="hard" readonly></textarea>
+
+    <h3>Plaintext or Error Code for Wrong Label</h3>
+    <p>
+      The ciphertext submitted by the user is first verified to be
+      valid and then shuffled with other ciphertexts and decrypted. To
+      demonstrate both you may either: (1) simply decrypt to see that
+      the plaintext is correct, or (2) modify the label between
+      encryption and decryption the ciphertext to see that it is
+      deemed invalid. (This is shown as "proof error".)
+    </p>
+    <p>
+      <button id="dmc_button">Simulate Decryption</button>
+    </p>
+    <textarea id="dmcc_text" name="dmcc_text" rows="4" cols="90" wrap="hard" readonly></textarea>
+
+    <h2>Multiple Choice Election (With Pre-computation)</h2>
+    <p>
+      This illustrates the use of pre-computation to improve
+      responsiveness. The computation is done by pressing the
+      pre-computation button in this example, but would be done in the
+      background, either upon loading or in a WebWorker. Note that
+      encryption is nearly instant given pre-computation.
+    </p>
+    <p>
+      <button id="pmcp_button">Precompute</button>
+      <div id="pmcpinfo_div"></div>
+    </p>
+    <div>
+      <input type="radio" name="pmc" value="Candidate 1" id="pmc1">
+      <label for="pmc1">Candidate 1</label>
+    </div>
+    <div>
+      <input type="radio" name="pmc" value="Candidate 2" id="pmc2">
+      <label for="pmc2">Candidate 2</label>
+    </div>
+    <div>
+      <input type="radio" name="pmc" value="Candidate 3" id="pmc3">
+      <label for="pmc3">Candidate 3</label>
+    </div>
+    <p>
+      <button id="pmc_button">Encrypt</button>
+    </p>
+    <div id="pmccinfo_div"></div>
+
+    <h3>Ciphertext</h3>
+    <textarea id="pmcc_text" name="pmcc_text" rows="4" cols="90" wrap="hard" readonly></textarea>
+    <p>
+      <button id="dpmc_button">Simulate Decryption</button>
+    </p>
+
+    <h3>Plaintext, or Error in case the Label is Wrong</h3>
+    <textarea id="dpmcc_text" name="dpmcc_text" rows="4" cols="90" wrap="hard" readonly></textarea>
+
+  </body>
+
+  <script type="module">
+
+    import { verificatum } from "./vts-bamecr-d-1.2.0-p30.js";
+
+    // #####################################################################
+    //
+    // Below we illustrate how to:
+    //
+    // (1) Initialize the source of cryptographically strong randomness.
+    // (2) Ummarshal a full public key provided by a mix-net and
+    //     instantiate a group, a cryptosystem, and recover the public key.
+    // (3) Read or set the label used for encryption.
+    // (4) Encrypt an ASCII message under an ASCII label.
+    // (5) Perform precomputation to enable faster encryption.
+    // (6) Encrypt an ASCII message under an ASCII label given precomputation.
+    //
+    // A resulting ciphertext c is a byte tree which may be converted to:
+    //
+    // (a) an array of bytes using c.toByteArray(), or
+    // (b) a hexadecimal string using c.toHexString(),
+    //
+    // depending on what is most appropriate for communication with
+    // the server.
+    //
+    // #####################################################################
+    
+    const asciiToByteArray = verificatum.base.asciiToByteArray;
+    const byteArrayToAscii = verificatum.base.byteArrayToAscii;
+    const byteArrayToHex = verificatum.base.byteArrayToHex;
+    const ElGamal = verificatum.crypto.ElGamal;
+    const ElGamalZKPoKWriteIn = verificatum.crypto.ElGamalZKPoKWriteIn;
+    const PGroupFactory = verificatum.algebra.PGroupFactory;
+    const SHA256 = verificatum.crypto.SHA256;
+    const WebAPIRandomDevice = verificatum.dom.WebAPIRandomDevice;
+    
+    // (1) Set up random source and maximal statistical distance used
+    //     when sampling.
+    const randomSource = new WebAPIRandomDevice();
+    const statDist = 50;
+
+    // (2) Unmarshal the group and public key from a full public key
+    //     output by the mix-net, and instantiate the cryptosystem
+    //     used.
+    function getPGroupCryptosystemPublicKey(marshalledPublicKey) {
+        const publicKey = ElGamal.unmarshalPK(marshalledPublicKey);
+        const pGroup = publicKey.pGroup.project(0);
+        const cryptosystem = new ElGamalZKPoKWriteIn(true,
+                                                     pGroup,
+                                                     new SHA256(),
+                                                     randomSource,
+                                                     statDist);
+        return [pGroup, cryptosystem, publicKey]
+    }
+
+    // (3) Set the label for the election or session. This should be
+    //     delivered with the public key and potentially additional
+    //     parameters. We cannot illustrate this here.
+    
+    // (4) Encrypt an ASCII message using a public key using an ASCII
+    //     label. The result is a byte tree.
+    //
+    //     You may determine the maximall number of bytes that can be
+    //     encoded using pGroup.getEncodeLength().
+    function encrypt(label, publicKey, plaintext) {
+        const labelBytes = asciiToByteArray(label);
+        const plaintextBytes = asciiToByteArray(plaintext);
+        const plaintextElement = pGroup.encoded(plaintextBytes);
+        const ciphertext = cryptosystem.encrypt(labelBytes,
+                                                publicKey,
+                                                plaintextElement);
+        return ciphertext;
+    }
+
+    // (5) We may perform almost all computations needed for
+    //     encryption in advance using precomputation.
+    function precompute(publicKey) {
+        return cryptosystem.precomputeEncrypt(publicKey);
+    }
+    
+    // (6) Given precomputation we can perform the encryption of an
+    //     ASCII encoded plaintext using a public key under an ASCII
+    //     encoded label almost instantly. The result is a byte tree
+    //     and identical to what is output using direct encryption.
+    function completeEncrypt(label,
+                             publicKey,
+                             precomputed,
+                             plaintext) {
+        const labelBytes = asciiToByteArray(label);
+        const plaintextBytes = asciiToByteArray(plaintext);
+        const plaintextElement = pGroup.encoded(plaintextBytes);
+        const ciphertext = cryptosystem.completeEncrypt(labelBytes,
+                                                        publicKey,
+                                                        precomputed,
+                                                        plaintextElement);
+        return ciphertext;
+    }
+
+    // #####################################################################
+
+    // We need the following additional functions to implement the
+    // demonstrator. We stress that they would not be part of a
+    // real-world client.
+
+    // We keep the private key for demonstration purposes.
+    let privateKey;
+    
+    // The mix-servers jointly generates a public key and outputs a
+    // full public key with an embedded representation of the group
+    // used.
+    function simulateKeyGeneration(groupName) {
+        const pGroup = PGroupFactory.getPGroup(groupName);
+        const cryptosystem = new ElGamalZKPoKWriteIn(true,
+                                                     pGroup,
+                                                     new SHA256(),
+                                                     randomSource,
+                                                     statDist);
+
+        // We keep the private key as a global variable for
+        // demonstration purposes.
+        let publicKey;
+        [publicKey, privateKey] = cryptosystem.gen();
+
+        // A full public key of this form is provided to a real
+        // client.
+        const marshalledPublicKey = ElGamal.marshalPK(publicKey);
+
+        return marshalledPublicKey;
+    }
+
+    // The mix-servers may mix or merely jointly decrypt ciphertexts
+    // using their shared secret key.
+    function simulateDecrypt(label, publicKey, privateKey, ciphertext) {
+        const labelBytes = asciiToByteArray(label);
+        const plaintextElement = cryptosystem.decrypt(labelBytes,
+                                                      publicKey,
+                                                      privateKey,
+                                                      ciphertext);
+        // CCA2 secure cryptosystems may throw an error in case the
+        // decryption fails.
+        if (typeof plaintextElement == "string") {
+            return plaintextElement;
+        } else {
+            const plaintextBytes = plaintextElement.decoded();
+            const plaintext = byteArrayToAscii(plaintextBytes);
+            return plaintext;
+        }
+    }
+
+    // #####################################################################
+
+    // The code below implements the GUI of the demonstrator in the
+    // simplest possible way. This would be replaced in a real-world
+    // client to ensure usability for all.
+
+    document.getElementById("version").innerHTML = verificatum.base.version;
+    if (verificatum.arithm.uli.wasm) {
+        document.getElementById("wasm").innerHTML = "enabled";
+    } else {
+        document.getElementById("wasm").innerHTML = "disabled";
+    }
+    
+    // Utility functions for HTML/JavaScript.
+    function radioValue(name) {
+        const radioButtons =
+              document.querySelectorAll('input[name="' + name + '"]');
+        let value = "";
+        for (const radioButton of radioButtons) {
+            if (radioButton.checked) {
+                value = radioButton.value;
+                break;
+            }
+        }
+        return value;
+    }
+    function setRadioHandler(name, handler) {
+        const radioButtons =
+              document.querySelectorAll('input[name="' + name + '"]');
+        for (const radioButton of radioButtons) {
+            radioButton.onclick = handler;
+        }
+    }
+    function setButtonHandler(name, handler) {
+        const button = document.querySelector('#' + name);
+        button.addEventListener("click", handler);
+    }
+
+    // The following global variables change each time we choose a
+    // new group for demonstration.
+    let pGroup;
+    let cryptosystem;
+    let publicKey;
+    let ciphertext;
+    let precomputed;
+
+    // This cleans the user interface to allow simulation of the
+    // mix-net key generation with different parameters.
+    function clean_examples() {
+        precomputed = null;
+
+        mcc_text.innerHTML = "";
+        pmcc_text.innerHTML = "";
+        dmcc_text.innerHTML = "";
+
+        mccinfo_div.innerHTML = "";
+        pmccinfo_div.innerHTML = "";
+        pmcpinfo_div.innerHTML = "";
+    }
+
+    // Sets the group to use, simulates the generation of a public key
+    // as a mix-net would do, and unmarshals the result as a
+    // real-world client would.
+    function choosePGroup() {
+        clean_examples();
+
+        const groupName = radioValue("group");
+        const marshalledPublicKey = simulateKeyGeneration(groupName);
+        [pGroup, cryptosystem, publicKey] =
+            getPGroupCryptosystemPublicKey(marshalledPublicKey);
+
+        mpk_text.innerHTML = marshalledPublicKey.toHexString();
+        pk_text.innerHTML = publicKey.toByteTree().toHexString();
+    }
+    setRadioHandler("group", choosePGroup);
+
+    // Use 3000-bit multiplicative group as default.
+    document.getElementById("modp3072").click()
+
+    // ---------------------------------------------------------------------
+    
+    // We use labeled encryption and for demonstration purposes we
+    // allow the user to modify it.
+    
+    label_text.innerHTML = "My Election";
+
+    function label() {
+        return document.getElementById('label_text').value
+    }
+
+    // ---------------------------------------------------------------------
+
+    // Illustrates invokation of direct encryption.
+    
+    function mc_click() {
+        const candidate = radioValue("mc");
+        if (candidate == "") {
+            mccinfo_div.innerHTML = "You have not selected any candidate!";
+        } else {
+            mccinfo_div.innerHTML = "";
+
+            // We make this global solely for demonstration purposes.
+            ciphertext = encrypt(label(), publicKey, candidate);
+            mcc_text.innerHTML = ciphertext.toHexString();
+        }
+    }
+    setButtonHandler("mc_button", mc_click);
+
+    function dmc_click() {
+        const plaintext =
+              simulateDecrypt(label(), publicKey, privateKey, ciphertext);
+        dmcc_text.innerHTML = plaintext;
+    }
+    setButtonHandler("dmc_button", dmc_click);
+
+    // ---------------------------------------------------------------------
+
+    // Illustrates invokation of precomputation and then encryption.
+    
+    function pmcp_click() {
+        precomputed = precompute(publicKey);
+        pmcpinfo_div.innerHTML = "Precomputation done!";
+    }
+    setButtonHandler("pmcp_button", pmcp_click);
+
+    function pmc_click() {
+        const candidate = radioValue("pmc");
+        if (candidate == "") {
+            pmccinfo_div.innerHTML = "You have not selected any candidate!";
+        } else if (precomputed == null) {
+            pmcc_text.innerHTML = "";
+            pmccinfo_div.innerHTML =
+                "Please pre-compute before encryption!";
+        } else {
+            pmccinfo_div.innerHTML = "";
+            pmcpinfo_div.innerHTML = "";
+
+            // We make this global solely for demonstration purposes.
+            ciphertext = completeEncrypt(label(),
+                                         publicKey,
+                                         precomputed,
+                                         candidate);
+            pmcc_text.innerHTML = ciphertext.toHexString();
+            precomputed = null;
+        }
+    }
+    setButtonHandler("pmc_button", pmc_click);
+
+    function dpmc_click() {
+        const plaintext =
+              simulateDecrypt(label(), publicKey, privateKey, ciphertext);
+        dpmcc_text.innerHTML = plaintext;
+    }
+    setButtonHandler("dpmc_button", dpmc_click);
+
+    </script>
+</html>

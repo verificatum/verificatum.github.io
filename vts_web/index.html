@@ -1,0 +1,76 @@
+  <!DOCTYPE html>
+<html>
+  <!--
+      Copyright 2008-2022 Douglas Wikstrom
+    -->
+  <head>
+    <title>Examples, Benchmarks, and Tests</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+    <link rel="stylesheet" href="index.css">
+    <base href="./">
+  </head>
+  <body>
+    
+    <h1>Examples, Tests, and Benchmarks</h1>
+    <p>
+      <b><i>Verificatum TypeScript Library</i></b><br>
+      <b><i>Version:  <span id="version"></span></i></b><br>
+      <b><i>WASM: <span id="wasm"></span></i></b><br>
+      <b><i>Date: <span id="today"></span></i></b>
+    </p>
+    <h3>Examples</h3>
+    <p>
+      To simplify adoption and deployment we have prepared examples of
+      how to use the library within a browser. The source of each
+      example is heavily documented to let users copy and paste
+      snippets into their own applications.
+    </p>
+    <ul>
+      <li>
+        <a href="example_client_simple.html">Example: Simple Use of Client Class</a>
+      </li>
+      <li>      
+        <a href="example_client_opts.html">Example: Using Client Class</a>
+      </li>
+      <li>      
+        <a href="example_explicit.html">Example: Using Functionality Directly</a>
+      </li>
+    </ul>
+    <h3>Test Suite</h3>
+    <p>
+      Tests should be executed on the target platform in addition to
+      the development platform, due to the heterogeneity of platforms,
+      engines, and versions. Thus, the tests corresponding to
+      running <code>make check_files</code> can be run directly in the
+      browser.
+    </p>
+    <ul>
+      <li>
+        <a href="test.html">Test Suite</a>
+      </li>
+    </ul>
+    <h3>Benchmark Suite</h3>
+    <p>
+      Similarly, running times should be estimated on the target
+      platform for clients to be realistic. Thus, the benchmark suite
+      corresponding to running <code>make bench_files</code> can be
+      run directly in the browser.
+    </p>
+    <ul>
+      <li>
+        <a href="bench.html">Benchmark Suite</a>
+      </li>
+    </ul>
+    <script type="module">
+
+      import { verificatum } from "./vts-bamecrd-d-1.2.0-p30.js";
+
+      if (verificatum.arithm.uli.wasm) {
+          document.getElementById("wasm").innerHTML = "enabled";
+      } else {
+          document.getElementById("wasm").innerHTML = "disabled";
+      }
+      document.getElementById("version").innerHTML = verificatum.base.version;
+      document.getElementById("today").innerHTML = verificatum.dev.bench.util.today();
+    </script>
+</html>

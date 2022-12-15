@@ -1,0 +1,438 @@
+ <!DOCTYPE html>
+<html>
+  <!--
+      Copyright 2008-2022 Douglas Wikstrom
+    -->
+  <head>
+    <title>Examples for VTS: Using Client Class</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+    <link rel="stylesheet" href="test.css">
+  </head>
+  <body>
+    
+    <h1>Examples for VTS: Using Client Class</h1>
+    <p>
+      <b><i>Verificatum TypeScript Library</i></b><br>
+      <b><i>Version:  <span id="version"></span></i></b><br>
+      <b><i>WASM: <span id="wasm"></span></i></b>
+    </p>
+    <p>
+      This example shows how the library can be configured and used
+      using the encryption client class. It provides a powerful
+      interface that reduces the problems of:
+      <ol>
+        <li>
+          parsing a marshalled public key along with a zero knowledge
+          proof description,
+        </li>
+        <li>
+          generating randomness,
+        </li>
+        <li>
+          optionally pre-compute encryption values,
+        </li>
+        <li>
+          encrypting a plaintext and compute a zero knowledge proof,
+        </li>
+        <li>
+          computing a digest of the ciphertext, and
+        </li>
+        <li>
+          encoding all of it into byte arrays or hexadecimal strings
+      </ol>
+      to a single function call. For byte arrays this can be achieved
+      as follows.
+      <b>
+        <pre>
+&lt;script type="module"&gt
+    import { verificatum } from "./vts-bamecr-d-1.2.0-p30.js";
+    const WebAPIElGamalZKPoKClient = verificatum.dom.WebAPIElGamalZKPoKClient;
+    [ciphertext, digest, seed] = ((new WebAPIElGamalZKPoKClient(mpk)).encrypt(label, plaintext)
+&lt;/script&gt;</pre>
+      </b>
+    </p>
+    <p>
+      Please view the source for detailed comments. The version of the
+      library used is
+      <code>vts-bamecr-d-1.2.0-p30.js</code>. Users should follow
+      the instructions in the <code>Makefile</code> to only load the
+      functionality and groups that they need.
+    </p>
+
+    <h2>Parameters Used in the Example</h2>
+    <p>
+      <b>Group.</b> The library can use different prime order
+      groups. Below you can choose from some examples.
+    </p>
+    <p>
+      <input type="radio" name="group" value="modp3072" id="modp3072">
+      <label for="modp3072">modp3072</label>&nbsp&nbsp
+      <input type="radio" name="group" value="modp4096" id="modp4096">
+      <label for="modp4096">modp4096</label>&nbsp&nbsp
+      <input type="radio" name="group" value="modp6144" id="modp6144">
+      <label for="modp6144">modp6144</label>&nbsp&nbsp
+      <input type="radio" name="group" value="P-256" id="P-256">
+      <label for="P-256">P-256</label>&nbsp&nbsp
+      <input type="radio" name="group" value="secp384r1" id="secp384r1">
+      <label for="secp384r1">secp384r1</label>&nbsp&nbsp
+      <input type="radio" name="group" value="P-521" id="P-521">
+      <label for="P-521">P-521</label>
+      &nbsp;&nbsp;<span id="mpkinfo_span"></span>
+    </p>
+    <p>
+      <b>Key width.</b> We can use different key widths, i.e., we can
+      employ the generalized El Gamal cryptosystem and zero knowledge
+      proof over product groups.
+    </p>
+    <p>
+      <select name="keywidth" id="keywidth">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+      </select>
+    </p>
+    <p>
+      <b>Pre-computation.</b> It can be used to pre-compute encryption
+      values asynchronously in a WebWorker.
+    </p>
+    <p>
+      <input type="checkbox" name="precomp" value="" id="precomp">
+      <label for="precomp">Using pre-computation</label>
+    </p>
+    <p>
+      <b>Format.</b> It can use hexadecimal strings or byte arrays as
+      its external format.
+    </p>
+    <p>
+      <input type="radio" name="format" value="hexadecimal" id="hexadecimal">
+      <label for="hexadecimal">hexadecimal</label>
+      <input type="radio" name="format" value="bytearray" id="bytearray">
+      <label for="bytearray">byte array</label>
+    </p>
+
+    <h3>Marshalled Public Key Containing Group Description</h3>
+    <p>
+      The client is provided the <i>full</i> public key and encoding
+      of the zero knowledge proof used in the form of a marshalled
+      hexadecimal string. We demonstrate this by generating a public
+      key within the demonstrator. The full public key is never
+      visible when using a real-world encryption client.
+    </p>
+    <textarea id="mpk_text" name="mpk" rows="4" cols="90" wrap="hard" readonly>
+    </textarea>
+    <p>
+      <label for="encodeLength">Number of bytes that can be encrypted:</label>
+      <input type="text" name="encodeLength" id="encodeLength" value="" size="3"
+             maxlength="" readonly>
+    </p>
+
+    <h3>Labeled CCA2 Encryption</h3>
+    <p>
+      A labeled CCA2 cryptosystem should be used in electronic voting
+      applications, i.e., the encryption function takes a label, a
+      public key, and the plaintext as input and produces a
+      ciphertext. To decrypt the <i>same label</i> is needed along
+      with the private key and ciphertext to compute the
+      plaintext. Otherwise the zero-knowledge proof which is part of
+      the ciphertext does not verify and the ciphertext is deemed
+      invalid.
+    </p>
+    <p>
+      The label ties the ciphertext to a given election or session,
+      i.e., it would be provided by the server and read-only to the
+      user. This prevents replay of ciphertexts from one election in
+      another if the same public key is re-used.
+    </p>
+    <p>
+      You may edit the label below after encryption and try to decrypt
+      to demonstrate that the ciphertext becomes invalid.
+    </p>
+    <input type="text" id="label_text" name="label_text" size="64">
+    
+    <h2>Multiple Choice Election</h2>
+    <p>
+      Encryption without pre-computation causes noticeably poor
+      responsiveness when a multiplicative group with reasonable
+      security level is used, but not when an elliptic curve group is
+      used. Thus, it is recommended to use pre-computation in the
+      former case.
+    </p>
+    <div>
+      <input type="radio" name="mc" value="Candidate 1" id="mc1">
+      <label for="mc1">Candidate 1</label>
+    </div>
+    <div>
+      <input type="radio" name="mc" value="Candidate 2" id="mc2">
+      <label for="mc2">Candidate 2</label>
+    </div>
+    <div>
+      <input type="radio" name="mc" value="Candidate 3" id="mc3">
+      <label for="mc3">Candidate 3</label>
+    </div>
+    <p>
+      <button id="mc_button">Encrypt</button>
+      &nbsp;&nbsp;<span id="mccinfo_span"></span>
+    </p>
+
+
+    <h3>Ciphertext</h3>
+    <p>
+      This ciphertext is submitted along with authentication data to
+      the receiver.
+    </p>
+    <textarea id="mcc_text" name="mcc_text" rows="4" cols="90" wrap="hard" readonly></textarea>
+    <h3>Digest</h3>
+    <p>
+      Digest of ciphertext that can be used as an address at a
+      bulletin board for auditing submitted ciphertexts.
+    </p>
+    <input type="text" id="mcd_text" name="mcd_text" size="64" readonly>
+    <h3>Seed</h3>
+    <p>
+      The seed used to generate the randomness used during
+      encryption. This may be handed to the user for auditing purposes
+      along with the digest.
+    </p>
+    <input type="text" id="mcs_text" name="mcs_text" size="64" readonly>
+
+    <h3>Plaintext, or Error in case the Label is Wrong</h3>
+    <p>
+      The ciphertext submitted by the user is first verified to be
+      valid and then shuffled with other ciphertexts and decrypted. To
+      demonstrate both you may either: (1) simply decrypt to see that
+      the plaintext is correct, or (2) modify the label between
+      encryption and decryption the ciphertext to see that it is
+      deemed invalid. (This is shown as "proof error" below.)
+    </p>
+    <p>
+      <button id="dmc_button">Simulate Decryption</button>
+    </p>
+    <textarea id="dmcc_text" name="dmcc_text" rows="4" cols="90" wrap="hard" readonly></textarea>
+
+  </body>
+
+  <script type="module">
+
+    import { verificatum } from "./vts-bamecr-d-1.2.0-p30.js";
+
+    // #####################################################################
+
+    const asciiToByteArray = verificatum.base.asciiToByteArray;
+    const hexAsByteArray = verificatum.base.hexAsByteArray;
+    const WebAPIElGamalZKPoKClient = verificatum.dom.WebAPIElGamalZKPoKClient;
+    const WebAPIElGamalZKPoKServer = verificatum.dom.WebAPIElGamalZKPoKServer;
+
+    // In this demonstrator we need this to be a variable to allow
+    // choosing different groups.
+    let client;
+
+    // The server is only used for demonstration purposes.
+    let server;
+    let format;
+
+    // Ciphertext, digest of ciphertext, and seed used to generate
+    // randomness for encryption.
+    let ciphertext;
+    let digest;
+    let seed;
+
+    // #####################################################################
+    
+    // The code below implements the GUI of the demonstrator in the
+    // simplest possible way. This would be replaced in a real-world
+    // client to ensure usability for all.
+
+    document.getElementById("version").innerHTML = verificatum.base.version;
+    if (verificatum.arithm.uli.wasm) {
+        document.getElementById("wasm").innerHTML = "enabled";
+    } else {
+        document.getElementById("wasm").innerHTML = "disabled";
+    }
+    
+    // Utility functions for HTML/JavaScript.
+    function radioValue(name) {
+        const radioButtons =
+              document.querySelectorAll('input[name="' + name + '"]');
+        let value = "";
+        for (const radioButton of radioButtons) {
+            if (radioButton.checked) {
+                value = radioButton.value;
+                break;
+            }
+        }
+        return value;
+    }
+    function setRadioHandler(name, handler) {
+        const radioButtons =
+              document.querySelectorAll('input[name="' + name + '"]');
+        for (const radioButton of radioButtons) {
+            radioButton.onclick = handler;
+        }
+    }
+    function checkboxValue(name) {
+        return document.querySelector("#" + name).checked;
+    }
+    function setCheckboxHandler(name, handler) {
+        const checkbox = document.querySelector('#' + name);
+        checkbox.addEventListener("change", handler);
+    }
+    function setButtonHandler(name, handler) {
+        const button = document.querySelector('#' + name);
+        button.addEventListener("click", handler);
+    }
+    function setSelectHandler(name, handler) {
+        const select = document.querySelector('#' + name);
+        select.addEventListener('change', handler, true);
+    }
+    function selectValue(name) {
+        var select = document.getElementById(name);
+        return select.options[select.selectedIndex].value;
+    }
+
+    // This cleans the user interface to allow simulation of the
+    // mix-net key generation with different parameters.
+    function cleanCryptoFields() {
+        document.getElementById("mcc_text").value = "";
+        document.getElementById("mcd_text").value = "";
+        document.getElementById("mcs_text").value = "";
+        document.getElementById("dmcc_text").value = "";
+        mccinfo_span.innerHTML = "";
+    }
+
+    function cleanExamples() {
+
+        cleanCryptoFields();
+        document.getElementById("mpk_text").value = "";
+        
+        document.getElementById("mc1").checked = false;
+        document.getElementById("mc2").checked = false;
+        document.getElementById("mc3").checked = false;
+    }
+
+    // Sets the group to use, simulates the generation of a public key
+    // as a mix-net would do, and unmarshals the result as a
+    // real-world client would.
+    function setup() {
+        cleanExamples();
+
+        // Set label.
+        document.getElementById('label_text').value = "My Election";
+
+        // Format used in visible text fields.
+        format = radioValue("format") == "hexadecimal";
+
+        // Determine keywidth.
+        const keywidth = parseInt(selectValue("keywidth"));
+        
+        // This creates a simulated server, which would not be part of
+        // a real-world client.
+        server = new WebAPIElGamalZKPoKServer(radioValue("group"), keywidth);
+        const mpk = server.marshalled(format);
+
+        // In a real-world marshalled value would be provided by the
+        // server or hardcoded string in this file or in a loaded
+        // JavaScript file.
+
+        if (checkboxValue("precomp")) {
+            let root = window.location.href;
+            root = root.slice(0, root.lastIndexOf("/"));
+
+            // We use a modified version of the library here that can
+            // be loaded by web workers. See Makefile.
+            const script = "vts-bamecrd-d-1.2.0-p30w.js"
+            client = new WebAPIElGamalZKPoKClient(mpk, root, script);
+            
+            // Automatically maintains the given number of values as
+            // pre-computed or in pre-computation.
+            //client.setMinPrecomputed(2);
+            client.precompute();
+        } else {
+            client = new WebAPIElGamalZKPoKClient(mpk);
+        }
+        document.getElementById("encodeLength").value =
+            "" + client.getEncodeLength();
+        document.getElementById("mpk_text").value = mpk;
+    }
+
+    setRadioHandler("group", setup);
+    setRadioHandler("format", setup);
+    setSelectHandler("keywidth", setup);
+    setSelectHandler("precomp", setup);
+
+    setRadioHandler("mc", cleanCryptoFields);
+
+    // Use hexadecimal and 3000-bit multiplicative group as default.
+    document.getElementById("hexadecimal").checked = true;
+    document.getElementById("modp3072").click()
+
+    // ---------------------------------------------------------------------
+    
+    // We use labeled encryption. We allow the user to modify it to
+    // enable demonstration of failing to decrypt due to an invalid
+    // label.
+    function label() {
+        return document.getElementById('label_text').value
+    }
+
+    // ---------------------------------------------------------------------
+
+    // Illustrates invokation of direct encryption.
+
+    let computing = false;
+    function mc_click() {
+        const candidate = radioValue("mc");
+        if (candidate == "") {
+            mccinfo_span.innerHTML = "You have not selected any candidate!";
+        } else if (computing) {
+
+            mccinfo_span.innerHTML = "Already computing!";
+
+        } else {
+
+            cleanCryptoFields();
+
+            computing = true;
+
+            mccinfo_span.innerHTML = "Computing...";
+
+            // A real-world client sends the ciphertext to the server
+            // along with authentication data, presents the digest to
+            // the user as a short pointer to later identify its
+            // ciphertext, and the seed to allow the user to audit the
+            // encryption function.
+            client.encrypt(asciiToByteArray(label()),
+                           asciiToByteArray(candidate),
+                           format)
+            .then( (cds) => {
+                [ciphertext, digest, seed] = cds;
+                document.getElementById("mcc_text").value = ciphertext;
+                document.getElementById("mcd_text").value = digest;
+                document.getElementById("mcs_text").value = seed;
+            }).then( () => {
+                computing = false;
+                mccinfo_span.innerHTML = "";
+            });
+        }
+    }
+    setButtonHandler("mc_button", mc_click);
+
+    // This simulates the decryption which is performed by the server
+    // in real-world applications.
+    
+    function dmc_click() {
+        try {
+            const plaintext = server.decrypt(asciiToByteArray(label()),
+                                             hexAsByteArray(ciphertext),
+                                             format);
+            document.getElementById("dmcc_text").value = plaintext;
+        } catch (e) {
+            document.getElementById("dmcc_text").value = e.message;
+        }
+    }
+    setButtonHandler("dmc_button", dmc_click);
+
+    </script>
+</html>

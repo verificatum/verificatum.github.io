@@ -1,0 +1,213 @@
+ <!DOCTYPE html>
+<html>
+  <!--
+      Copyright 2008-2022 Douglas Wikstrom
+    -->
+  <head>
+    <title>Benchmarks for VTS</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+    <link rel="stylesheet" href="bench.css">
+  </head>
+  <body>
+    
+    <h1>Benchmarks for VTS</h1>
+    <p>
+
+      <b><i>Verificatum TypeScript Library</i></b><br>
+      <b><i>Version: <span id="version"></span></i></b><br>
+      <b><i>WORDSIZE: <span id="wordsize"></span></i></b><br>
+      <b><i>LOOPS: <span id="loops_name"></span></i></b><br>
+      <b><i>WASM: <span id="wasm"></span></i></b><br>
+      <b><i>Date: <span id="today"></span></i></b>
+    </p>
+    <p>
+
+      Each benchmark computes at least <span id="minSamples"></span>
+      samples of the measured quantity and takes the average. The
+      running time of the layout engine is not included in the running
+      time. Note that benchmarks give different results using
+      different JavaScript engines and that other factors may
+      influence the results. In particular, the last measurements may
+      not reflect actual running time (it would be faster), since the
+      garbage collection is poor on some platforms. Thus, interpret
+      the results with care and investigate the particular case you
+      are interested in before drawing any hard conclusions.
+
+    </p>
+    <p>
+
+      The library is designed to use fixed-basis and simultaneous
+      exponentiation as well as pre-computation all the way up to the
+      highest abstraction layer, but the benchmarks do not use
+      this. Combined with a web worker as in this benchmark,
+      pre-computations can be done in the background.
+
+    </p>
+
+    <h2>Exponentiation</h2>
+    <p>
+
+      The running times include the cost of generating random
+      exponents, which gives an upper bound of the running time of the
+      actual exponentiation.
+      
+    </p>
+    <p>
+
+      The running time of modular exponentiation is increased by
+      almost factor of 8 when the bit size of the modulus is doubled
+      as expected from a relatively naive implementation. A similar
+      behavior can be seen in the elliptic curves with growing field
+      size, but with a slightly smaller factor.
+
+    </p>
+    <p>
+
+      The library has powerful abstractions for windowing
+      exponentiation, fixed-basis exponentiation, (wide) simultaneous
+      exponentiation, and mixing them arbitrarily without any
+      overhead. This is not benchmarked below. These running times
+      should be viewed as generous upper bounds for applications that
+      exploit this feature.
+
+    </p>
+
+    <h3>Standard Multiplicative Groups</h3>
+    <div id="ModPGroup.exp">Waiting.</div>
+
+
+    <h3>Standard Elliptic Curves</h3>
+    <div id="ECqPGroup.exp">Waiting.</div>
+
+    <h2>Encryption over Selected Groups</h2>
+    <p>
+
+      The running time of encryption grows linearly with the width, so
+      the values for greater widths are readily extrapolated from the
+      given numbers.
+
+    </p>
+
+    <h3>El Gamal Encryption (ms / ciphertext)</h3>
+    <p>
+
+      This is only benchmarked for the purpose of comparison. It is
+      not CCA2 secure or even non-malleable, and should therefore not
+      be used unless other equivalent mechanisms are in place.
+
+    </p>
+    <div id="ElGamal">Waiting.</div>
+
+    <h3>El Gamal Encryption with Label and ZKPoK (ms / ciphertext)</h3>
+    <p>
+
+      This is the simplest cryptosystem, which is non-malleable in a
+      standard heuristic sense, i.e., it is the El Gamal cryptosystem
+      with proof of knowledge of the randomness turned non-interactive
+      using the Fiat-Shamir heuristic. This is not provably secure in
+      the random oracle model, but likely to be secure.
+
+    </p>
+    <div id="ElGamalZKPoKWriteIn">Waiting.</div>
+
+    <h3>Naor-Yung with Label and ZKPoK (ms / ciphertext)</h3>
+    <p>
+
+      This is the Naor-Yung cryptosystem, which is provably CCA2
+      secure with the Fiat-Shamir heuristic in the random oracle
+      model.
+
+    </p>
+    <div id="NaorYung">Waiting.</div>
+    
+  </body>
+  <script type="module">
+
+    import { verificatum } from "./vts-bamecrd-d-1.2.0-p30.js";
+
+    const minSamples = 3;
+    
+    document.getElementById("version").innerHTML = verificatum.base.version;
+    document.getElementById("wordsize").innerHTML =
+        verificatum.arithm.uli.WORDSIZE;
+    if (verificatum.arithm.uli.wasm) {
+        document.getElementById("wasm").innerHTML = "true";
+    } else {
+        document.getElementById("wasm").innerHTML = "false";
+    }
+    document.getElementById("loops_name").innerHTML =
+        verificatum.arithm.uli.loops_name;    
+    document.getElementById("today").innerHTML = verificatum.dev.bench.util.today();
+    document.getElementById("minSamples").innerHTML = minSamples;
+
+    // Due to the running time of the benchmarks we must run them in a
+    // WebWorker to avoid that browsers complain about the loading
+    // time of the page.
+    
+    // This converts the function testworker to a string and wraps it
+    // in immediate function evaluation to allow it to be embedded in
+    // the library as code and not a string.
+
+    let code = verificatum.devdom.benchworker.toString();
+    code = code.replace("Suite(", "verificatum.dev.bench.Suite(");
+    const scriptBlob =
+          new Blob(["(" + code + ")();"], {type: 'text/javascript'});
+    const worker = new Worker(URL.createObjectURL(scriptBlob));
+
+    // Individual benchmarks to be executed. You may comment out what
+    // you are not interested in, except that "initialize" must be
+    // used first. The text of any benchmark that is commented out
+    // then remains "Waiting".
+    let commands = [
+        "initialize",
+        "ModPGroup.exp",
+        "ECqPGroup.exp",
+        "ElGamal",
+        "ElGamalZKPoKWriteIn",
+        "NaorYung"
+    ];
+    
+    // This exchanges events with the worker thread.
+    worker.onmessage = function (e) {
+
+        var command = e.data[0];
+
+        if (commands.length === 0 || command != commands[0]) {
+            throw Error("Unexpected report of command execution!");
+        }
+
+        // Display the result of the executed benchmark if we did not
+        // initialize.
+        if (command !== "initialize") {
+            document.getElementById(e.data[0]).innerHTML = e.data[1];
+        }
+
+        // Send request to worker thread to compute next command.
+        commands = commands.slice(1);
+        if (commands.length > 0) {
+            document.getElementById(commands[0]).innerHTML =
+                "Computing... please be patient!";
+
+            worker.postMessage([commands[0], minSamples]);
+        }
+    };
+
+    // Start the sequence of benchmarks here. We do load the worker
+    // code again here, but it is a short script so it does not
+    // matter. It is more important to have a single self-contained
+    // file.
+    let root = window.location.href;
+    root = root.slice(0, root.lastIndexOf("/"));
+
+    // We use a modified version of the library here that can be
+    // loaded by web workers. See Makefile.
+    worker.postMessage([commands[0],
+                        root,
+                        "vts-bamecrd-d-1.2.0-p30w.js",
+                        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]);
+
+    if (commands.length === 0) {
+       worker.terminate();
+    }
+    </script>
+</html>
